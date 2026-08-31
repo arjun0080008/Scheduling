@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>TEMPO Scheduler — Formal Model</title>
+<style>
+@page{ size:A4; margin:0; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:"DejaVu Serif",Georgia,serif; font-size:8.4pt; line-height:1.33; color:#16202B;
+  -webkit-print-color-adjust:exact; print-color-adjust:exact;
+}
+.page{
+  width:210mm; height:297mm; padding:11mm 14mm 9mm; position:relative;
+  page-break-after:always; overflow:hidden; background:#fff;
+}
+.page:last-child{page-break-after:auto}
+h1,h2,h3,h4,.sans,.lbl,.tag,figcaption,th{font-family:"DejaVu Sans",Helvetica,Arial,sans-serif}
+h1{font-size:17pt;line-height:1.1;margin:0 0 1.6mm;letter-spacing:-.02em;color:#0D47A1}
+h2{font-size:10.1pt;margin:3mm 0 1.2mm;color:#0D47A1;letter-spacing:-.01em;
+   border-bottom:1.2px solid #0D47A1;padding-bottom:.9mm}
+h2 .no{color:#9AAAB8;font-weight:400;margin-right:2.4mm}
+h3{font-size:8.6pt;margin:2mm 0 .8mm;color:#0B7A6E}
+p{margin:0 0 1.25mm}
+.mono,code{font-family:"DejaVu Sans Mono",monospace;font-size:7.4pt}
+code{background:#EEF2F6;padding:0 .8mm;border-radius:1mm}
+.v{font-style:italic;font-family:"DejaVu Serif",Georgia,serif}
+.sub{font-size:.72em;vertical-align:-.28em;font-style:normal}
+.small{font-size:7.4pt;color:#5C6B7A;line-height:1.34}
+.lead{font-size:8.8pt;color:#33445A;line-height:1.38;margin-bottom:1.8mm}
+.rule{border:0;border-top:1px solid #DDE5EC;margin:2mm 0}
+
+/* running head / foot */
+.rh{position:absolute;top:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;
+    font-family:"DejaVu Sans";font-size:7pt;color:#9AAAB8;letter-spacing:.09em;text-transform:uppercase;
+    border-bottom:.6px solid #E6ECF2;padding-bottom:1.4mm}
+.rf{position:absolute;bottom:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;
+    font-family:"DejaVu Sans";font-size:7pt;color:#9AAAB8;border-top:.6px solid #E6ECF2;padding-top:1.4mm}
+.pnum{font-family:"DejaVu Sans Mono";color:#0D47A1;font-weight:bold}
+
+/* display maths */
+.disp{border-left:2.2px solid #0D47A1;background:#F7FAFD;padding:1.5mm 2.6mm;margin:1.5mm 0;
+      font-size:8.2pt;line-height:1.42}
+.disp.teal{border-left-color:#0B7A6E;background:#F5FBFA}
+.disp.amber{border-left-color:#B7791F;background:#FDFAF2}
+.cases{display:grid;grid-template-columns:auto 1fr;gap:.6mm 3.5mm;align-items:baseline}
+.cases .r{font-family:"DejaVu Sans Mono";font-size:7.5pt;font-weight:bold}
+.cs-full{color:#2E7D32}.cs-el{color:#B7791F}.cs-tbd{color:#8A5A12}.cs-none{color:#5C6B7A}
+.where{font-size:7.4pt;color:#5C6B7A;margin-top:1mm;line-height:1.34}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:7.5pt;margin:1.2mm 0}
+th{background:#EDF3F9;font-size:7.1pt;letter-spacing:.03em;color:#33465A;
+   text-align:left;padding:1mm 1.6mm;border:.7px solid #D6E0E9;font-weight:bold}
+td{padding:.9mm 1.6mm;border:.7px solid #E3EAF1;vertical-align:top}
+td.n,th.n{text-align:right;font-family:"DejaVu Sans Mono"}
+tr:nth-child(even) td{background:#FAFCFE}
+.tight td,.tight th{padding:.65mm 1.3mm}
+
+/* callouts */
+.note{border:1px solid #DDE5EC;border-radius:2mm;padding:1.5mm 2.2mm;margin:1.5mm 0;background:#fff}
+.note.key{border-color:#C6D9F5;background:#F2F7FE}
+.note.warn{border-color:#EBD9AE;background:#FDF9F0}
+.note h4{margin:0 0 .9mm;font-size:7.7pt;text-transform:uppercase;letter-spacing:.07em;color:#0D47A1}
+.note.warn h4{color:#8A5A12}
+figure{margin:1.4mm 0}
+figcaption{font-size:7pt;color:#5C6B7A;margin-top:.9mm;line-height:1.3}
+figcaption b{color:#0D47A1}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:4mm}
+.tag{display:inline-block;font-size:6.8pt;padding:.3mm 1.4mm;border-radius:1mm;border:.7px solid;
+     letter-spacing:.04em;vertical-align:1px}
+.t-g{color:#2E7D32;border-color:#C4E2C6;background:#E7F4E8}
+.t-a{color:#8A5A12;border-color:#EBD9AE;background:#FBF2E0}
+.t-r{color:#B3261E;border-color:#F2C9C5;background:#FCEAE8}
+.t-b{color:#0D47A1;border-color:#C6D9F5;background:#E8F0FC}
+ul{margin:1mm 0;padding-left:4.2mm}
+li{margin:.5mm 0}
+.cover{background:linear-gradient(160deg,#0D47A1 0%,#0B3C86 55%,#0B7A6E 100%);color:#fff;
+       margin:-11mm -14mm 3.6mm;padding:10mm 14mm 6mm}
+.cover h1{color:#fff;margin-bottom:1.2mm}
+.cover .sub2{font-family:"DejaVu Sans";font-size:8.4pt;color:#CFE0F7;line-height:1.38}
+.cover .meta{font-family:"DejaVu Sans Mono";font-size:6.6pt;color:#9DBCE8;margin-top:2.4mm;letter-spacing:.03em}
+</style></head><body>
+
+<!-- ══════════════════════════ PAGE 1 ══════════════════════════ -->
+<section class="page">
+  <div class="cover">
+    <h1>The TEMPO Scheduling Model</h1>
+    <div class="sub2">A formal specification of resident clinic availability, capacity and
+      day-construction for an Internal Medicine continuity clinic</div>
+    <div class="meta">ACADEMIC YEAR 2026–27 &nbsp;·&nbsp; 40 RESIDENTS &nbsp;·&nbsp; 12 BLOCKS &nbsp;·&nbsp; 261 CLINIC WEEKDAYS</div>
+  </div>
+  <div class="rf"><span>TEMPO Scheduler — Formal Model</span><span class="pnum">1 / 4</span></div>
+
+  <p class="lead">The scheduling problem is a <b>constrained assignment under partial information</b>.
+  Who is in clinic on a given date is stored nowhere — it is <i>derived</i>, and for much of the year the
+  data it is derived from is genuinely undecided. The model makes that gap explicit rather than defaulting over it.</p>
+
+  <h2><span class="no">§1</span>Objects and the block map</h2>
+  <p><span class="v">R</span> is the set of residents, |<span class="v">R</span>| = 40, split evenly by level
+  <span class="v">ℓ</span> : <span class="v">R</span> → {PGY-1, PGY-2}. <span class="v">B</span> = {1, …, 12} are the rotation
+  blocks. <span class="v">D</span> are the dates of the academic year <span class="v">Y</span> = [2026-07-01, 2027-06-30] —
+  365 days holding <b>261 clinic weekdays</b>. <span class="v">W</span> = {1, …, 5} are Monday to Friday, and
+  <span class="v">w</span>(<span class="v">d</span>) is the weekday of date <span class="v">d</span>.</p>
+  <p>Each block is a closed date interval [<span class="v">s<span class="sub">k</span></span>, <span class="v">e<span class="sub">k</span></span>].
+  The twelve intervals are pairwise disjoint and contiguous, so they <b>partition</b> the year:</p>
+  <div class="disp" style="margin-top:1.2mm">
+    <span class="v">β</span> : <span class="v">D</span> → <span class="v">B</span> ∪ {⊥},&nbsp;&nbsp;
+    <span class="v">β</span>(<span class="v">d</span>) = <span class="v">k</span> &nbsp;⟺&nbsp;
+    <span class="v">s<span class="sub">k</span></span> ≤ <span class="v">d</span> ≤ <span class="v">e<span class="sub">k</span></span>,&nbsp;&nbsp;
+    otherwise ⊥ (outside the year)
+    <div class="where">Length check &nbsp;— &nbsp;7 blocks of 28 days + 4 blocks of 35 days + 1 block of 29 days
+      &nbsp;=&nbsp; 196 + 140 + 29 &nbsp;=&nbsp; <b>365</b>, exactly the span of <span class="v">Y</span>. No gaps, no overlaps.</div>
+  </div>
+
+  <h3>1.1 &nbsp;The rotation matrix and the elective-day map</h3>
+  <p>Every resident holds one rotation per block, encoded as a letter — a total function, a dense
+  40 × 12 = <b>480-entry matrix</b> supplied by the residency programme:</p>
+  <div class="disp teal">
+    <span class="v">C</span> : <span class="v">R</span> × <span class="v">B</span> → {O, N, E, A}
+    <div class="where">
+      <b>O</b> outpatient — clinic every weekday of the block &nbsp;·&nbsp;
+      <b>N</b> inpatient / nights / ICU — no clinic &nbsp;·&nbsp;
+      <b>E</b> elective-type — exactly one clinic weekday per week &nbsp;·&nbsp;
+      <b>A</b> away rotation — as E, flagged for confirmation
+    </div>
+  </div>
+  <p>Codes <b>E</b> and <b>A</b> fix the <i>frequency</i> — one day a week — but not <i>which</i> day. That is a second,
+  independent datum, and critically a <b>partial</b> function, since the programme settles it only about a month ahead:</p>
+  <div class="disp amber">
+    <span class="v">δ</span> : <span class="v">R</span> × <span class="v">B</span> → <span class="v">W</span> ∪ {⊥},&nbsp;&nbsp;
+    with <span class="v">δ</span>(<span class="v">r</span>, <span class="v">k</span>) = ⊥ whenever the clinic day for that block is undecided
+    <div class="where">The domain of <span class="v">δ</span> is entered by the scheduler and is empty on first use.
+      <b>No value of <span class="v">δ</span> is ever inferred, defaulted or interpolated.</b></div>
+  </div>
+
+  <h2><span class="no">§2</span>The availability function</h2>
+  <p>Everything the application displays follows from one function. Writing <span class="v">k</span> = <span class="v">β</span>(<span class="v">d</span>):</p>
+  <div class="disp">
+    <b><span class="v">a</span>(<span class="v">r</span>, <span class="v">d</span>)</b> =
+    <div class="cases" style="margin-top:1.6mm">
+      <span class="r cs-none">NONE</span><span>if <span class="v">k</span> = ⊥, or <span class="v">w</span>(<span class="v">d</span>) ∉ <span class="v">W</span>, or <span class="v">r</span> is inactive &nbsp;<span class="small">(outside year, weekend, off roster)</span></span>
+      <span class="r cs-full">FULL</span><span>if <span class="v">C</span>[<span class="v">r</span>, <span class="v">k</span>] = O</span>
+      <span class="r cs-none">NONE</span><span>if <span class="v">C</span>[<span class="v">r</span>, <span class="v">k</span>] = N</span>
+      <span class="r cs-tbd">ELECTIVE_TBD</span><span>if <span class="v">C</span>[<span class="v">r</span>, <span class="v">k</span>] ∈ {E, A} and <span class="v">δ</span>(<span class="v">r</span>, <span class="v">k</span>) = ⊥</span>
+      <span class="r cs-el">ELECTIVE_DAY</span><span>if <span class="v">C</span>[<span class="v">r</span>, <span class="v">k</span>] ∈ {E, A} and <span class="v">w</span>(<span class="v">d</span>) = <span class="v">δ</span>(<span class="v">r</span>, <span class="v">k</span>)</span>
+      <span class="r cs-none">NONE</span><span>otherwise</span>
+    </div>
+  </div>
+
+  <figure>
+  <svg viewBox="0 0 680 122" width="97%" style="display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg" font-family="DejaVu Sans">
+    <defs><marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="2.4" orient="auto">
+      <path d="M0,0 L6,2.4 L0,4.8 z" fill="#7A8B9C"/></marker></defs>
+    <g stroke="#7A8B9C" stroke-width="1.1" fill="none" marker-end="url(#ar)">
+      <path d="M66,40 L86,40"/><path d="M188,40 L208,40"/><path d="M288,40 L308,40"/>
+      <path d="M410,40 L430,40"/><path d="M532,40 L552,40"/>
+      <path d="M138,58 L138,86"/><path d="M360,58 L360,86"/><path d="M482,58 L482,86"/>
+      <path d="M240,58 L229,86"/><path d="M258,58 L270,86"/>
+    </g>
+    <rect x="0" y="22" width="66" height="36" rx="4" fill="#0D47A1"/>
+    <text x="33" y="45" fill="#fff" font-size="10.5" text-anchor="middle" font-weight="bold">(r, d)</text>
+    <g fill="#fff" stroke-width="1.15">
+      <rect x="88" y="22" width="100" height="36" rx="4" stroke="#0D47A1"/>
+      <rect x="210" y="22" width="78"  height="36" rx="4" stroke="#0D47A1"/>
+      <rect x="310" y="22" width="100" height="36" rx="4" stroke="#B7791F"/>
+      <rect x="432" y="22" width="100" height="36" rx="4" stroke="#B7791F"/>
+    </g>
+    <g font-size="7.9" text-anchor="middle">
+      <text x="138" y="38" fill="#0D47A1">in year? weekday?</text><text x="138" y="49" fill="#0D47A1">active?</text>
+      <text x="249" y="38" fill="#0D47A1">read code</text><text x="249" y="49.5" fill="#0D47A1" font-weight="bold" font-size="8.6">C[r, k]</text>
+      <text x="360" y="38" fill="#8A5A12">clinic day set?</text><text x="360" y="49.5" fill="#8A5A12" font-weight="bold" font-size="8.6">δ(r, k)</text>
+      <text x="482" y="38" fill="#8A5A12">does it match today?</text><text x="482" y="49.5" fill="#8A5A12" font-weight="bold" font-size="8.6">w(d) = δ(r, k)</text>
+    </g>
+    <g stroke-width="1">
+      <rect x="552" y="22" width="126" height="36" rx="4" fill="#E7F4E8" stroke="#C4E2C6"/>
+      <rect x="88"  y="86" width="100" height="24" rx="4" fill="#EEF2F6" stroke="#DDE5EC"/>
+      <rect x="210" y="86" width="38"  height="24" rx="4" fill="#E7F4E8" stroke="#C4E2C6"/>
+      <rect x="252" y="86" width="36"  height="24" rx="4" fill="#EEF2F6" stroke="#DDE5EC"/>
+      <rect x="310" y="86" width="100" height="24" rx="4" fill="#FBF2E0" stroke="#EBD9AE"/>
+      <rect x="432" y="86" width="100" height="24" rx="4" fill="#EEF2F6" stroke="#DDE5EC"/>
+    </g>
+    <g font-weight="bold" text-anchor="middle">
+      <text x="615" y="44.5" font-size="9.2" fill="#2E7D32">ELECTIVE_DAY</text>
+      <text x="138" y="101" font-size="8.4" fill="#5C6B7A">NONE</text>
+      <text x="229" y="101" font-size="8" fill="#2E7D32">FULL</text>
+      <text x="270" y="101" font-size="7.6" fill="#5C6B7A">NONE</text>
+      <text x="360" y="101" font-size="8" fill="#8A5A12">ELECTIVE_TBD</text>
+      <text x="482" y="101" font-size="8.4" fill="#5C6B7A">NONE</text>
+    </g>
+    <g font-size="7" fill="#5C6B7A">
+      <text x="143" y="76">no</text><text x="298" y="36" text-anchor="middle">E / A</text>
+      <text x="365" y="76">⊥</text><text x="420" y="36" text-anchor="middle">set</text>
+      <text x="487" y="76">no</text><text x="542" y="36" text-anchor="middle">yes</text>
+      <text x="218" y="76">O</text><text x="272" y="76">N</text>
+    </g>
+  </svg>
+  <figcaption><b>Figure 1 — The availability decision.</b> Four outcomes, not three. The amber terminal is the
+  one most scheduling tools omit: it records that the answer is <i>not yet knowable</i>, which is different from
+  the resident being unavailable.</figcaption>
+  </figure>
+
+  <div class="note key">
+    <h4>The soundness property</h4>
+    <p style="margin:0">Define the in-clinic predicate
+    <span class="v">ι</span>(<span class="v">r</span>, <span class="v">d</span>) = [ <span class="v">a</span>(<span class="v">r</span>, <span class="v">d</span>) ∈ {FULL, ELECTIVE_DAY} ]
+    and the roster <span class="v">R</span>(<span class="v">d</span>) = { <span class="v">r</span> : <span class="v">ι</span>(<span class="v">r</span>, <span class="v">d</span>) }.
+    Because ⊥ maps to its own outcome instead of collapsing into a weekday,
+    <b><span class="v">ι</span> holds only where a human supplied the day.</b> So <span class="v">R</span>(<span class="v">d</span>) is a
+    <b>lower bound</b> on who is truly in clinic, never an over-estimate, and it is <b>monotone in information</b>:
+    setting <span class="v">δ</span>(<span class="v">r</span>, <span class="v">k</span>) = <span class="v">j</span> adds <span class="v">r</span> to exactly
+    the dates of block <span class="v">k</span> with weekday <span class="v">j</span>, and removes them from none.
+    Under-booking is recoverable; double-booking a resident who is on the wards is not.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════ PAGE 2 ══════════════════════════ -->
+<section class="page">
+  <div class="rh"><span>Capacity algebra</span><span>TEMPO Scheduler</span></div>
+  <div class="rf"><span>TEMPO Scheduler — Formal Model</span><span class="pnum">2 / 4</span></div>
+
+  <h2><span class="no">§3</span>Templates and horizon-dependent admissibility</h2>
+  <p>A clinic day is not a bucket of appointments but an ordered sequence of typed slots:</p>
+  <div class="disp teal">
+    <span class="v">T</span>(<span class="v">ℓ</span>, <span class="v">w</span>) = ⟨ (<span class="v">m<span class="sub">i</span></span>, <span class="v">μ<span class="sub">i</span></span>, <span class="v">c<span class="sub">i</span></span>) ⟩,&nbsp;&nbsp;
+    <span class="v">m</span> = start minute, <span class="v">μ</span> = duration, <span class="v">c</span> ∈ {Est, New, FROZEN, HospFU, Any}
+    <div class="where">Invariant — no slot satisfies 720 ≤ <span class="v">m</span> &lt; 780. The lunch hour is structurally absent, not merely blocked.
+      PGY-2 slots have <span class="v">μ</span> = 30, PGY-1 slots <span class="v">μ</span> = 60. Durations are never shortened to create room.</div>
+  </div>
+
+  <div class="two">
+    <div>
+      <h3>3.1 &nbsp;Template sizes |<span class="v">T</span>|</h3>
+      <table class="tight">
+        <tr><th>Level</th><th class="n">Mon–Wed</th><th class="n">Thu</th><th class="n">Fri</th></tr>
+        <tr><td>PGY-2 <span class="small">(30 min)</span></td><td class="n">16</td><td class="n">8</td><td class="n">14</td></tr>
+        <tr><td>PGY-1 <span class="small">(60 min)</span></td><td class="n">8</td><td class="n">4</td><td class="n">7</td></tr>
+      </table>
+      <p class="small" style="margin-top:1mm">Thursday is a half day, so the count halves; Friday starts at 09:00.
+      Both are structural — they follow from the template, so every downstream number inherits them automatically.</p>
+    </div>
+    <div>
+      <h3>3.2 &nbsp;Class composition, PGY-2 Mon–Wed</h3>
+      <table class="tight">
+        <tr><th>Class</th><th class="n">n</th><th>Admits</th></tr>
+        <tr><td>Est</td><td class="n">9</td><td>follow-ups, any horizon</td></tr>
+        <tr><td>New</td><td class="n">4</td><td>new patients while <span class="v">h</span> ≥ 14</td></tr>
+        <tr><td>FROZEN</td><td class="n">2</td><td>urgent / discharge, <span class="v">h</span> ≤ 2</td></tr>
+        <tr><td>HospFU</td><td class="n">1</td><td>discharge follow-up ≤ 14 d</td></tr>
+        <tr><td><b>Total</b></td><td class="n"><b>16</b></td><td></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <p>Let <span class="v">h</span> = <span class="v">d</span> − today be the <b>booking horizon</b> and <span class="v">v</span> the visit type.
+  Admissibility is a relation on (class, visit, horizon), so the <i>usable</i> template changes as a date approaches
+  even though |<span class="v">T</span>| never does:</p>
+  <div class="disp">
+    adm(New, <span class="v">v</span>, <span class="v">h</span>) = (<span class="v">v</span> = NEW ∧ <span class="v">h</span> ≥ 14) ∨ (<span class="v">v</span> = EST ∧ <span class="v">h</span> &lt; 14)
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    adm(FROZEN, <span class="v">v</span>, <span class="v">h</span>) = <span class="v">h</span> ≤ 2 ∧ <span class="v">v</span> ∈ {HOSP, EST}
+    <div class="where">A New slot does not vanish at <span class="v">h</span> = 14 — it <b>reclassifies</b> into an Est slot. A Frozen slot is invisible until
+      <span class="v">h</span> = 2, then opens only to urgent, discharge or waitlist work.</div>
+  </div>
+
+  <h3>3.3 &nbsp;Admissible slot count for one PGY-2 Monday, as a function of horizon</h3>
+  <table class="tight">
+    <tr><th>Visit type <span class="v">v</span></th><th class="n"><span class="v">h</span> ≥ 14</th><th class="n">2 &lt; <span class="v">h</span> &lt; 14</th><th class="n"><span class="v">h</span> ≤ 2</th><th>Reading</th></tr>
+    <tr><td>Follow-up (EST)</td><td class="n">9</td><td class="n">13</td><td class="n">15</td><td>New slots convert, then Frozen releases</td></tr>
+    <tr><td>New patient (NEW)</td><td class="n">4</td><td class="n">0</td><td class="n">0</td><td>the protected window closes at 14 days</td></tr>
+    <tr><td>Hospital follow-up (HOSP)</td><td class="n">1</td><td class="n">1</td><td class="n">3</td><td>the dedicated 13:00 slot, plus Frozen late</td></tr>
+    <tr><td><i>PGY-1, any type</i></td><td class="n">8</td><td class="n">8</td><td class="n">8</td><td>class <i>Any</i> is horizon-invariant</td></tr>
+  </table>
+
+  <h2><span class="no">§4</span>The constraint hierarchy</h2>
+  <p>With <span class="v">b</span>(<span class="v">r</span>, <span class="v">d</span>) the patients booked with <span class="v">r</span> on <span class="v">d</span>,
+  and <span class="v">A</span> attendings, four ceilings act at once — three per resident, one across the day:</p>
+  <div class="disp">
+    <b>Per resident</b>&nbsp;&nbsp;
+    <span class="v">b</span> ≤ <span class="v">κ</span>(<span class="v">ℓ</span>,<span class="v">w</span>) = ⌊ <span class="v">ρ</span> · <span class="v">τ</span>(<span class="v">ℓ</span>,<span class="v">w</span>) ⌋ &nbsp;<span class="small">(advance bookings, <span class="v">ρ</span> = 0.70)</span>
+    &nbsp;&nbsp;≤&nbsp;&nbsp; <span class="v">τ</span>(<span class="v">ℓ</span>,<span class="v">w</span>) &nbsp;<span class="small">(target)</span>
+    &nbsp;&nbsp;≤&nbsp;&nbsp; |<span class="v">T</span>(<span class="v">ℓ</span>,<span class="v">w</span>)| &nbsp;<span class="small">(hard maximum)</span>
+    <div style="margin-top:1.8mm"><b>Across the day</b>&nbsp;&nbsp;
+      Σ<span class="sub">r</span> <span class="v">b</span>(<span class="v">r</span>,<span class="v">d</span>) ≤ <span class="v">Σ</span>(<span class="v">d</span>) = <span class="v">A</span> · <span class="v">p</span>(<span class="v">w</span>),&nbsp;
+      <span class="v">p</span> = 32 &nbsp;(16 on Thursday)
+      &nbsp;&nbsp;⟹&nbsp;&nbsp; bookable(<span class="v">d</span>) = min( Σ<span class="sub">r</span> <span class="v">τ</span>, <span class="v">Σ</span>(<span class="v">d</span>) )</div>
+    <div class="where">The chain <span class="v">κ</span> ≤ <span class="v">τ</span> ≤ |<span class="v">T</span>| holds for all six (<span class="v">ℓ</span>, <span class="v">w</span>) combinations
+      under the shipped defaults; the reserve <span class="v">τ</span> − <span class="v">κ</span> is what pays for Frozen releases, hospital follow-ups and same-day flex.</div>
+  </div>
+
+  <table class="tight">
+    <tr><th>Level / weekday</th><th class="n">κ ceiling</th><th class="n">τ target</th><th class="n">|T| max</th><th class="n">reserve τ−κ</th><th class="n">slack |T|−τ</th></tr>
+    <tr><td>PGY-2 Mon–Wed</td><td class="n">8</td><td class="n">12</td><td class="n">16</td><td class="n">4</td><td class="n">4</td></tr>
+    <tr><td>PGY-2 Thu <span class="small">(AM)</span></td><td class="n">4</td><td class="n">6</td><td class="n">8</td><td class="n">2</td><td class="n">2</td></tr>
+    <tr><td>PGY-2 Fri <span class="small">(09:00)</span></td><td class="n">7</td><td class="n">10</td><td class="n">14</td><td class="n">3</td><td class="n">4</td></tr>
+    <tr><td>PGY-1 Mon–Wed</td><td class="n">3</td><td class="n">5</td><td class="n">8</td><td class="n">2</td><td class="n">3</td></tr>
+    <tr><td>PGY-1 Thu</td><td class="n">2</td><td class="n">3</td><td class="n">4</td><td class="n">1</td><td class="n">1</td></tr>
+    <tr><td>PGY-1 Fri</td><td class="n">2</td><td class="n">4</td><td class="n">7</td><td class="n">2</td><td class="n">3</td></tr>
+  </table>
+
+  <figure>
+  <svg viewBox="0 0 680 214" width="89%" style="display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg" font-family="DejaVu Sans">
+    <text x="0" y="10" font-size="9" font-weight="bold" fill="#0D47A1">A · ONE RESIDENT — PGY-2, Monday</text>
+    <g font-size="8.4" fill="#33445A">
+      <text x="0" y="30">hard max |T|</text><text x="0" y="52">target τ</text><text x="0" y="74">ceiling κ</text>
+    </g>
+    <g>
+      <rect x="96" y="21" width="480" height="12" rx="2" fill="#EEF2F6" stroke="#C6CFD8"/>
+      <rect x="96" y="43" width="360" height="12" rx="2" fill="#E8F0FC" stroke="#0D47A1"/>
+      <rect x="96" y="65" width="240" height="12" rx="2" fill="#E3F4F1" stroke="#0B7A6E"/>
+    </g>
+    <g font-size="8.6" font-family="DejaVu Sans Mono" font-weight="bold">
+      <text x="584" y="31" fill="#5C6B7A">16</text><text x="464" y="53" fill="#0D47A1">12</text><text x="344" y="75" fill="#0B7A6E">8</text>
+    </g>
+    <g stroke="#B7791F" stroke-width="1" fill="none">
+      <path d="M336,84 L336,92 L456,92 L456,84"/><path d="M456,84 L456,98 L576,98 L576,84" stroke="#9AAAB8"/>
+    </g>
+    <text x="396" y="90" font-size="7.4" fill="#8A5A12" text-anchor="middle">reserve 4</text>
+    <text x="516" y="106" font-size="7.4" fill="#6B7A88" text-anchor="middle">structural slack 4</text>
+    <text x="96" y="118" font-size="7.4" fill="#9AAAB8">0</text><text x="570" y="118" font-size="7.4" fill="#9AAAB8">16 patients</text>
+
+    <text x="0" y="140" font-size="9" font-weight="bold" fill="#0D47A1">B · THE WHOLE DAY — Monday 31 Aug 2026, 6 residents, 3 attendings</text>
+    <g font-size="8.4" fill="#33445A">
+      <text x="0" y="158">supervision Σ</text><text x="0" y="176">slot supply Σ|T|</text><text x="0" y="194">Σ targets</text>
+    </g>
+    <g>
+      <rect x="96" y="149" width="480" height="12" rx="2" fill="#FBF2E0" stroke="#B7791F"/>
+      <rect x="96" y="167" width="400" height="12" rx="2" fill="#EEF2F6" stroke="#C6CFD8"/>
+      <rect x="96" y="185" width="290" height="12" rx="2" fill="#E8F0FC" stroke="#0D47A1"/>
+    </g>
+    <g font-size="8.6" font-family="DejaVu Sans Mono" font-weight="bold">
+      <text x="584" y="159" fill="#8A5A12">96</text><text x="504" y="177" fill="#5C6B7A">80</text><text x="394" y="195" fill="#0D47A1">58</text>
+    </g>
+    <line x1="386" y1="145" x2="386" y2="201" stroke="#B3261E" stroke-width="1.4" stroke-dasharray="3,2"/>
+    <text x="382" y="212" font-size="7.6" fill="#B3261E" text-anchor="end" font-weight="bold">bookable = 58 — targets bind, not supervision</text>
+  </svg>
+  <figcaption><b>Figure 2 — Nested ceilings.</b> Panel A: an advance booking may fill only 8 of a PGY-2's 16 Monday slots;
+  the gap is held for urgent and discharge work. Panel B: on this real day the binding constraint is the sum of targets (58),
+  not supervision (96) — supervision would only bind below <span class="v">A</span> = 58 / 32 ≈ 1.8, i.e. with a single attending.</figcaption>
+  </figure>
+</section>
+
+<!-- ══════════════════════════ PAGE 3 ══════════════════════════ -->
+<section class="page">
+  <div class="rh"><span>The day-construction algorithm</span><span>TEMPO Scheduler</span></div>
+  <div class="rf"><span>TEMPO Scheduler — Formal Model</span><span class="pnum">3 / 4</span></div>
+
+  <h2><span class="no">§5</span>State: the continuity partition</h2>
+  <p>Each present resident carries a booked load split by <b>continuity level</b> — how tightly the patient is bound
+  to that doctor. This partition is what makes a principled overflow decision possible:</p>
+  <div class="disp">
+    <span class="v">b</span>(<span class="v">r</span>) = <span class="v">μ<span class="sub">r</span></span> + <span class="v">π<span class="sub">r</span></span> + <span class="v">α<span class="sub">r</span></span>
+    <div class="where">
+      <span class="v">μ</span> &nbsp;<b>C1 — must see own doctor.</b> Immovable. &nbsp;·&nbsp;
+      <span class="v">π</span> &nbsp;<b>C2 — prefer own team.</b> Movable to the firm partner only. &nbsp;·&nbsp;
+      <span class="v">α</span> &nbsp;<b>C3 — any doctor.</b> Freely movable.
+    </div>
+  </div>
+  <p>A <b>firm</b> pairs one PGY-2 with one PGY-1 inside a named attending lane — the partial order that stages 4 and 5,
+  and the whole call-out cascade, navigate.</p>
+
+  <h2><span class="no">§6</span>The five-stage pipeline</h2>
+  <figure>
+  <svg viewBox="0 0 680 150" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="DejaVu Sans">
+    <defs><marker id="a2" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+      <path d="M0,0 L6,2.5 L0,5 z" fill="#0D47A1"/></marker></defs>
+    <g stroke="#0D47A1" stroke-width="1.2" marker-end="url(#a2)" fill="none">
+      <path d="M126,32 L138,32"/><path d="M254,32 L266,32"/><path d="M382,32 L394,32"/><path d="M510,32 L522,32"/>
+    </g>
+    <g>
+      <rect x="2" y="10" width="124" height="44" rx="4" fill="#E8F0FC" stroke="#0D47A1" stroke-width="1.1"/>
+      <rect x="138" y="10" width="116" height="44" rx="4" fill="#FCEAE8" stroke="#B3261E" stroke-width="1.1"/>
+      <rect x="266" y="10" width="116" height="44" rx="4" fill="#FBF2E0" stroke="#B7791F" stroke-width="1.1"/>
+      <rect x="394" y="10" width="116" height="44" rx="4" fill="#E3F4F1" stroke="#0B7A6E" stroke-width="1.1"/>
+      <rect x="522" y="10" width="156" height="44" rx="4" fill="#F3E9F8" stroke="#6A1B9A" stroke-width="1.1"/>
+    </g>
+    <g font-size="9.4" font-weight="bold" text-anchor="middle">
+      <text x="64" y="27" fill="#0D47A1">1 · LOCK</text>
+      <text x="196" y="27" fill="#B3261E">2 · CAP</text>
+      <text x="324" y="27" fill="#8A5A12">3 · RELEASE</text>
+      <text x="452" y="27" fill="#0B7A6E">4 · BALANCE</text>
+      <text x="600" y="27" fill="#6A1B9A">5 · STAGGER</text>
+    </g>
+    <g font-size="7.5" text-anchor="middle" fill="#33445A">
+      <text x="64" y="39">pin μ and π</text><text x="64" y="48.5">in place</text>
+      <text x="196" y="39">enforce τ then Σ</text><text x="196" y="48.5">emit the move list</text>
+      <text x="324" y="39">open Frozen, place</text><text x="324" y="48.5">the waiting queues</text>
+      <text x="452" y="39">even out α across</text><text x="452" y="48.5">firm and lane</text>
+      <text x="600" y="39">assign lanes, offset starts by</text><text x="600" y="48.5">0 / 10 / 20 min inside each lane</text>
+    </g>
+    <g font-size="7.2" fill="#5C6B7A">
+      <text x="64" y="70" text-anchor="middle">μ, π fixed</text>
+      <text x="196" y="70" text-anchor="middle">Σb ≤ Σ(d)</text>
+      <text x="324" y="70" text-anchor="middle">b ≤ min(τ, |T|)</text>
+      <text x="452" y="70" text-anchor="middle">no one pushed &gt; τ</text>
+      <text x="600" y="70" text-anchor="middle">≤ 1 preceptor request per 10 min</text>
+    </g>
+    <text x="0" y="70" font-size="7" fill="#9AAAB8">invariant</text>
+    <line x1="0" y1="76" x2="680" y2="76" stroke="#E6ECF2"/>
+
+    <!-- priority ladder -->
+    <text x="0" y="92" font-size="8.6" font-weight="bold" fill="#B3261E">STAGE 2 — removal priority (lexicographic; stop as soon as Σb ≤ Σ)</text>
+    <g font-size="8">
+      <rect x="0" y="99" width="150" height="17" rx="3" fill="#F7FAFD" stroke="#C6D9F5"/>
+      <text x="8" y="111" fill="#0D47A1"><tspan font-weight="bold">1.</tspan> PGY-2 · any doctor</text>
+      <rect x="158" y="99" width="150" height="17" rx="3" fill="#F7FAFD" stroke="#C6D9F5"/>
+      <text x="166" y="111" fill="#0D47A1"><tspan font-weight="bold">2.</tspan> PGY-1 · any doctor</text>
+      <rect x="316" y="99" width="150" height="17" rx="3" fill="#FDFAF2" stroke="#EBD9AE"/>
+      <text x="324" y="111" fill="#8A5A12"><tspan font-weight="bold">3.</tspan> PGY-2 · prefer team</text>
+      <rect x="474" y="99" width="150" height="17" rx="3" fill="#FDFAF2" stroke="#EBD9AE"/>
+      <text x="482" y="111" fill="#8A5A12"><tspan font-weight="bold">4.</tspan> PGY-1 · prefer team</text>
+      <rect x="632" y="99" width="46" height="17" rx="3" fill="#FCEAE8" stroke="#B3261E"/>
+      <text x="640" y="111" fill="#B3261E" font-weight="bold">never μ</text>
+    </g>
+    <text x="0" y="132" font-size="7.6" fill="#5C6B7A">Within a pass the victim is <tspan font-style="italic">arg max</tspan><tspan font-size="6.6">r</tspan> b(r) — the busiest resident — so repeated removal levels the remaining loads to within one patient of each other.</text>
+    <text x="0" y="144" font-size="7.6" fill="#5C6B7A">Each displaced patient is quoted their doctor's own <tspan font-family="DejaVu Sans Mono" font-size="7">nextClinicDates</tspan>, computed from §2, so the move list names a real destination rather than "reschedule".</text>
+  </svg>
+  <figcaption><b>Figure 3 — BUILD THE DAY.</b> Five stages, each preserving the invariant printed beneath it.
+  Stage 2 is the only stage that removes patients, and it exhausts the freely-movable pool before touching
+  anything with a continuity claim.</figcaption>
+  </figure>
+
+  <h3>6.1 &nbsp;Stage 2 in detail</h3>
+  <p>Capping runs in two phases. The <b>local</b> phase brings each resident to their own target;
+  the <b>global</b> phase then enforces supervision across the day.</p>
+  <div class="disp">
+    <b>(a) local</b> &nbsp; for each <span class="v">r</span>: while <span class="v">b</span>(<span class="v">r</span>) &gt; <span class="v">τ</span>(<span class="v">r</span>), remove one from <span class="v">α</span>, else from <span class="v">π</span>; never from <span class="v">μ</span>.<br>
+    <span style="padding-left:14mm" class="small">A second loop enforces <span class="v">b</span>(<span class="v">r</span>) ≤ |<span class="v">T</span>|; only here may <span class="v">μ</span> be broken, and doing so raises a named warning.</span>
+    <div style="margin-top:1.6mm"><b>(b) global</b> &nbsp; while Σ<span class="sub">r</span> <span class="v">b</span>(<span class="v">r</span>) &gt; <span class="v">Σ</span>(<span class="v">d</span>): draw from the first non-empty pass
+      of ⟨(PGY-2, <span class="v">α</span>), (PGY-1, <span class="v">α</span>), (PGY-2, <span class="v">π</span>), (PGY-1, <span class="v">π</span>)⟩, victim = arg max <span class="v">b</span>(<span class="v">r</span>).</div>
+    <div class="where">PGY-1 loads are protected ahead of PGY-2 — a deliberate policy choice: a PGY-1 has half the slots
+      and a 60-minute teaching visit is the hardest thing in the day to re-place.</div>
+  </div>
+
+  <h3>6.2 &nbsp;Worked example — the supervision squeeze</h3>
+  <p>Six PGY-2s with 8 booked each and three PGY-1s with 4 each, on a Monday, with a <b>single</b> attending.
+  All patients are "any doctor".</p>
+  <table class="tight">
+    <tr><th>Quantity</th><th class="n">Value</th><th>Derivation</th></tr>
+    <tr><td>Booked before</td><td class="n">60</td><td>6 × 8 + 3 × 4</td></tr>
+    <tr><td>Per-resident targets</td><td class="n">—</td><td>8 ≤ 12 and 4 ≤ 5, so the <b>local</b> phase removes nothing</td></tr>
+    <tr><td>Supervision cap Σ</td><td class="n">32</td><td>1 attending × 32</td></tr>
+    <tr><td>Excess</td><td class="n">28</td><td>60 − 32</td></tr>
+    <tr><td>Drawn from pass 1</td><td class="n">28</td><td>PGY-2 "any doctor" pool holds 48 ≥ 28, so passes 2–4 never run</td></tr>
+    <tr><td>PGY-1 touched</td><td class="n">0</td><td>protected — their 12 bookings are untouched</td></tr>
+    <tr><td>Booked after</td><td class="n">32</td><td>exactly the cap; the six PGY-2 loads level to 4, 4, 3, 3, 3, 3</td></tr>
+  </table>
+  <p class="small">This is acceptance test 6, asserted on every page load.</p>
+
+  <h3>6.3 &nbsp;Cost</h3>
+  <p>Each removal or placement re-filters and re-sorts the candidate pool, so with
+  <span class="v">n</span> = |<span class="v">R</span>(<span class="v">d</span>)| residents present, an excess <span class="v">X</span> and a waiting queue <span class="v">Q</span>,
+  building a day costs <b>O((<span class="v">X</span> + |<span class="v">Q</span>|) · <span class="v">n</span> log <span class="v">n</span>)</b> with all loops explicitly bounded.
+  Forward searches for a resident's next clinic date are capped at a 420-day scan, so they terminate inside the academic year by construction.
+  The year heatmap evaluates <span class="v">a</span>(<span class="v">r</span>, <span class="v">d</span>) once per resident per clinic weekday —
+  40 × 261 = <b>10,440 evaluations</b>, each O(1) — which is why the whole year renders in a single pass with no caching.</p>
+
+  <div class="note warn">
+    <h4>What this is not</h4>
+    <p style="margin:0">The pipeline is a <b>greedy heuristic with an explicit, auditable priority order</b>, not an optimiser.
+    It does not compute a globally optimal assignment and makes no such claim. That is the intended trade: every
+    decision it takes can be read back as one sentence in the move list and overruled by the scheduler, which
+    matters more at a front desk than optimality.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════ PAGE 4 ══════════════════════════ -->
+<section class="page">
+  <div class="rh"><span>Failure recovery, the application, verification</span><span>TEMPO Scheduler</span></div>
+  <div class="rf"><span>TEMPO Scheduler — Formal Model</span><span class="pnum">4 / 4</span></div>
+
+  <h2><span class="no">§7</span>The call-out cascade</h2>
+  <p>When resident <span class="v">g</span> is absent their load (<span class="v">μ</span>, <span class="v">π</span>, <span class="v">α</span>)
+  must be redistributed <i>today</i>. Define the spare capacity of <span class="v">p</span> when allowed <span class="v">x</span> over target:</p>
+  <div class="disp teal">
+    <span class="v">c</span>(<span class="v">p</span>, <span class="v">x</span>) = max( 0,&nbsp; min( <span class="v">τ<span class="sub">p</span></span> + <span class="v">x</span>,&nbsp; |<span class="v">T<span class="sub">p</span></span>| ) − <span class="v">b<span class="sub">p</span></span> )
+    <div class="where">The overflow allowance <span class="v">x</span> is itself clipped by the template maximum, so <b>no relaxation
+      can ever produce more patients than there are slots.</b> Only one call site uses <span class="v">x</span> &gt; 0.</div>
+  </div>
+
+  <figure>
+  <svg viewBox="0 0 680 172" width="100%" style="display:block" xmlns="http://www.w3.org/2000/svg" font-family="DejaVu Sans">
+    <defs><marker id="a3" markerWidth="7" markerHeight="7" refX="6" refY="2.4" orient="auto">
+      <path d="M0,0 L6,2.4 L0,4.8 z" fill="#7A8B9C"/></marker></defs>
+    <g stroke="#7A8B9C" stroke-width="1.1" fill="none" marker-end="url(#a3)">
+      <path d="M96,38 L124,38"/><path d="M96,90 L124,90"/><path d="M96,142 L124,142"/>
+      <path d="M354,38 L378,38"/><path d="M354,90 L378,90"/><path d="M354,142 L378,142"/>
+    </g>
+    <rect x="0" y="14" width="96" height="150" rx="4" fill="#FCEAE8" stroke="#B3261E" stroke-width="1.1"/>
+    <text x="48" y="30" font-size="8.8" font-weight="bold" fill="#B3261E" text-anchor="middle">Dr. g is out</text>
+    <g font-size="8.6" font-family="DejaVu Sans Mono" text-anchor="middle">
+      <text x="48" y="44" fill="#B3261E">μ  must</text>
+      <text x="48" y="94" fill="#B7791F">π  prefer</text>
+      <text x="48" y="146" fill="#6A1B9A">α  any</text>
+    </g>
+    <g fill="#fff" stroke-width="1.15">
+      <rect x="124" y="18" width="230" height="40" rx="4" stroke="#B3261E"/>
+      <rect x="124" y="70" width="230" height="40" rx="4" stroke="#B7791F"/>
+      <rect x="124" y="122" width="230" height="40" rx="4" stroke="#6A1B9A"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="239" y="35" font-size="8.4" font-weight="bold" fill="#B3261E">firm partner, up to c(q, 2)</text>
+      <text x="239" y="48" font-size="7.4" fill="#5C6B7A">the only relaxation in the whole model</text>
+      <text x="239" y="87" font-size="8.4" font-weight="bold" fill="#8A5A12">firm partner c(q, 0), then the lane</text>
+      <text x="239" y="100" font-size="7.4" fill="#5C6B7A">candidates ascending by current load</text>
+      <text x="239" y="139" font-size="8.4" font-weight="bold" fill="#6A1B9A">anyone with c(r, 0) &gt; 0</text>
+      <text x="239" y="152" font-size="7.4" fill="#5C6B7A">candidates ascending by current load</text>
+    </g>
+    <g stroke-width="1">
+      <rect x="378" y="18" width="300" height="40" rx="4" fill="#F6FBF7" stroke="#C4E2C6"/>
+      <rect x="378" y="70" width="300" height="40" rx="4" fill="#F6FBF7" stroke="#C4E2C6"/>
+      <rect x="378" y="122" width="300" height="40" rx="4" fill="#F6FBF7" stroke="#C4E2C6"/>
+    </g>
+    <g font-size="8.4" font-weight="bold" fill="#2E7D32">
+      <text x="390" y="35">seen today, if there is room</text>
+      <text x="390" y="87">seen today, if there is room</text>
+      <text x="390" y="139">seen today, if there is room</text>
+    </g>
+    <g font-size="7.6">
+      <text x="390" y="49" fill="#0D47A1">otherwise → g's own next clinic dates</text>
+      <text x="390" y="101" fill="#8A5A12">otherwise → nurse reschedule list</text>
+      <text x="390" y="153" fill="#8A5A12">otherwise → nurse reschedule list</text>
+    </g>
+  </svg>
+  <figcaption><b>Figure 4 — Redistribution under absence.</b> Each continuity class is offered the tightest
+  acceptable destination first and spills only when that destination is genuinely full. Only C1 patients are
+  allowed to push a partner over target, and only by two.</figcaption>
+  </figure>
+
+  <div class="note key">
+    <h4>Conservation</h4>
+    <p style="margin:0">No patient is created or lost by the cascade:</p>
+    <div style="text-align:center;margin:1.6mm 0 0;font-size:9.4pt">
+      <span class="v">μ</span> + <span class="v">π</span> + <span class="v">α</span> &nbsp;=&nbsp;
+      placed<span class="sub">must</span> + placed<span class="sub">prefer</span> + placed<span class="sub">any</span>
+      &nbsp;+&nbsp; deferred to <span class="v">g</span>'s next dates &nbsp;+&nbsp; nurse list
+    </div>
+    <p class="small" style="margin:1.4mm 0 0">This identity is asserted directly in acceptance test 7, so a
+    redistribution that silently dropped a patient would fail the build.</p>
+  </div>
+
+  <h2><span class="no">§8</span>The application surface</h2>
+  <p>Five screens, each a thin presentation of one function above.</p>
+  <table class="tight">
+    <tr><th style="width:44mm">Screen</th><th style="width:56mm">Computed by</th><th>Question answered</th></tr>
+    <tr><td><b>1 · Who's in clinic?</b></td><td class="mono">residentsOnDate, residentsUndecidedOnDate, computeCapacity</td><td>Who can I book — and who don't we know about yet?</td></tr>
+    <tr><td><b>2 · When can I book Dr. X?</b></td><td class="mono">adviseBooking, nextClinicDates, prevClinicDates</td><td>Real dates in a window, ranked by remaining ceiling</td></tr>
+    <tr><td><b>3 · Year at a glance</b></td><td class="mono">renderHeatmap over a(r, d)</td><td>Which days months ahead are thin, which crowded?</td></tr>
+    <tr><td><b>4 · Build today's day</b></td><td class="mono">buildDay, layoutDay, renderGrid</td><td>Make today fit, and tell me exactly what to move</td></tr>
+    <tr><td><b>5 · Someone called out</b></td><td class="mono">sameDayFallback, attendingDropped</td><td>Where does each patient go now?</td></tr>
+  </table>
+  <p class="small">Tab 2 ranks candidate dates by remaining ceiling <span class="v">κ</span> − booked, breaking ties toward the earliest.
+  The application stores <b>no patient-level data of any kind</b> — every input is a count. Only configuration is persisted,
+  and only to the browser running it.</p>
+
+  <h2><span class="no">§9</span>Verification and honest limits</h2>
+  <div class="two">
+    <div>
+      <h3>9.1 &nbsp;Executable specification</h3>
+      <p class="small" style="margin-bottom:1.2mm">Nine acceptance tests run on every page load. They are the specification:</p>
+      <table class="tight" style="font-size:7.6pt">
+        <tr><th style="width:6mm">#</th><th>Asserts</th></tr>
+        <tr><td>1</td><td>block partition; friendly failure outside the year</td></tr>
+        <tr><td>2</td><td>O / N / E / A resolve correctly across four blocks</td></tr>
+        <tr><td>3</td><td>only outpatient residents appear before days are set</td></tr>
+        <tr><td>4</td><td>Thursday AM only; Friday 09:00; lunch never used</td></tr>
+        <tr><td>5</td><td>an empty window still returns nearest dates</td></tr>
+        <tr><td>6</td><td>the 60 → 32 squeeze; PGY-1 protected</td></tr>
+        <tr><td>7</td><td>cascade bound τ+2 and the conservation identity</td></tr>
+        <tr><td>8</td><td>all 261 weekdays render with counts and names</td></tr>
+        <tr><td>9</td><td>an undecided clinic day is never guessed or counted</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>9.2 &nbsp;What the model does not claim</h3>
+      <ul class="small" style="margin-top:1.4mm">
+        <li>The rotation matrix <span class="v">C</span> is <b>programme-supplied data</b>. The tool cannot verify it and does not try.</li>
+        <li><span class="v">δ</span> is empty until entered. Coverage of the year is therefore a function of scheduler effort, not of the algorithm.</li>
+        <li><span class="v">τ</span>, <span class="v">ρ</span> and <span class="v">p</span> = 32 are <b>policy parameters</b>, not measured capacities. All are editable.</li>
+        <li>Because only counts are held, no true panel-level continuity rate can be computed — continuity is enforced <i>prospectively</i>, per booking.</li>
+        <li>Default firm pairing is by roster order and should be replaced with the real firm structure.</li>
+        <li>No optimality guarantee: §6 is a heuristic with a stated priority order.</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="rule">
+  <p class="small" style="margin:0"><b>Provenance.</b> Every quantity in this document is produced by the shipped
+  implementation — one self-contained HTML file with no dependencies. Figure 2B (80 slots, 58 target, 96 cap, 38 ceiling)
+  is the application's own output for Monday 31 August 2026 with three attendings; §6.2 and the §7 bound are acceptance
+  tests 6 and 7. Nothing here is estimated, benchmarked or projected.</p>
+</section>
+
+</body></html>
