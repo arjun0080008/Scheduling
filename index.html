@@ -94,6 +94,7 @@ textarea{width:100%;min-height:110px;font-family:"IBM Plex Mono",monospace;font-
 .b-elec{background:var(--amber-bg);color:var(--amber);border-color:#EBD9AE}
 .b-away{background:var(--purple-bg);color:var(--purple);border-color:#DEC7EB}
 .b-none{background:var(--grey-bg);color:var(--muted);border-color:var(--line)}
+.b-tbd{background:repeating-linear-gradient(45deg,#FBF2E0,#FBF2E0 5px,#fff 5px,#fff 10px);color:#7A5310;border-color:#EBD9AE}
 .b-day{background:var(--blue-bg);color:var(--blue);border-color:#C6D9F5;font-size:13px;padding:5px 12px}
 .banner{border-radius:12px;padding:11px 14px;margin:10px 0;font-size:14px;border:1px solid}
 .banner.warn{background:var(--amber-bg);border-color:#EBD9AE;color:#7A5310}
@@ -125,6 +126,7 @@ th{background:#F2F6F9;font-weight:600;font-size:12px;text-transform:uppercase;le
 .blk.E{background:var(--amber-bg);border-color:#EBD9AE;color:#7A5310}
 .blk.N{background:var(--grey-bg);border-color:var(--line);color:var(--muted)}
 .blk.A{background:repeating-linear-gradient(45deg,#F3E9F8,#F3E9F8 5px,#fff 5px,#fff 10px);border-color:#DEC7EB;color:var(--purple)}
+.blk.tbd{background:repeating-linear-gradient(45deg,#FBF2E0,#FBF2E0 5px,#fff 5px,#fff 10px);border-color:#EBD9AE;color:#7A5310}
 .blk.now{outline:2px solid var(--blue);outline-offset:1px}
 
 /* ---------- heatmap ---------- */
@@ -142,6 +144,8 @@ th{background:#F2F6F9;font-weight:600;font-size:12px;text-transform:uppercase;le
 .hm-d.zero{background:var(--grey-bg)}.hm-d.zero .ct{color:var(--muted)}
 .hm-d:hover{outline:2px solid var(--blue)}
 .hm-d.blank{border:none;background:transparent;cursor:default}
+.hm-d .tbd{font-family:"IBM Plex Mono";font-size:8.5px;color:#7A5310;line-height:1}
+.hm-d.hastbd{border-style:dashed;border-color:#C9A96B}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin:10px 0;align-items:center}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:5px;vertical-align:-2px;border:1px solid var(--line)}
 
@@ -213,10 +217,12 @@ td.tcol{width:62px;font-family:"IBM Plex Mono";font-size:11px;color:var(--muted)
 
 <div class="wrap">
   <div id="electiveBanner" class="banner warn noprint">
-    <b>Heads up:</b> elective clinic days are currently a best guess (spread Monday→Friday down the list).
-    Go to <b>Settings</b> and set each resident's real elective clinic day.
-    <button class="btn ghost sm" style="margin-left:8px" onclick="go('set')">Open Settings</button>
-    <button class="btn ghost sm" onclick="dismissBanner()">I've set them</button>
+    <b>Elective clinic days are set by you, never guessed by this tool.</b>
+    A resident on an <span class="kbd">E</span> or <span class="kbd">A</span> block comes to clinic one weekday a week,
+    and the programme usually decides which day about a month ahead. Until you enter it in Settings, this tool will say
+    <b>"clinic day not decided yet"</b> for that resident — it will not put them on a day it made up.
+    <button class="btn ghost sm" style="margin-left:8px" onclick="go('set')">Set clinic days</button>
+    <button class="btn ghost sm" onclick="dismissBanner()">Hide this</button>
   </div>
 
   <!-- ============ TAB 1 ============ -->
@@ -272,6 +278,7 @@ td.tcol{width:62px;font-family:"IBM Plex Mono";font-size:11px;color:var(--muted)
         <span><i style="background:#E7F4E8;border-color:#C4E2C6"></i>good — 4 to 9</span>
         <span><i style="background:#FBF2E0;border-color:#EBD9AE"></i>heavy — 10 or more (check attendings)</span>
         <span><i style="background:#EEF2F6"></i>nobody in clinic</span>
+        <span><i style="border-style:dashed;border-color:#C9A96B"></i><b>+n?</b> = that many more whose clinic day is not decided yet</span>
       </div>
     </div>
     <div id="yearOut"></div>
@@ -368,6 +375,11 @@ td.tcol{width:62px;font-family:"IBM Plex Mono";font-size:11px;color:var(--muted)
         <span class="kbd">N</span> inpatient / nights / ICU (no clinic) ·
         <span class="kbd">E</span> everything else (one clinic day a week) ·
         <span class="kbd">A</span> away rotation (confirm)</p>
+      <p class="sub"><b>Under every <span class="kbd">E</span> and <span class="kbd">A</span> block there is a weekday box.</b>
+        That is the one day that resident comes to clinic during that block. Leave it on <span class="kbd">—</span> until the
+        programme decides; the tool will then say "clinic day not decided yet" rather than inventing a day.
+        If a resident has the same day all year, use the <b>Set every E/A block to</b> column at the end of the row.
+        Remember to press <b>Save settings</b>.</p>
       <div class="scroll"><table id="setRoster"></table></div>
     </div>
 
@@ -389,9 +401,13 @@ td.tcol{width:62px;font-family:"IBM Plex Mono";font-size:11px;color:var(--muted)
         <ul>
           <li><b>O</b> — outpatient block. In clinic <b>every weekday</b> of that block.</li>
           <li><b>N</b> — inpatient, night float or ICU. <b>No clinic at all</b> that block.</li>
-          <li><b>E</b> — anything else (elective, SNF, ED Obs, community). <b>One fixed weekday</b> each week — set it in Settings.</li>
+          <li><b>E</b> — anything else (elective, SNF, ED Obs, community). <b>One fixed weekday</b> each week — you set it in Settings, per block.</li>
           <li><b>A</b> — away rotation. Treated like E, but shown as <b>"away — confirm"</b>. Always ring to confirm.</li>
         </ul>
+        <p><b>This tool never guesses a clinic day.</b> The programme usually decides an E or A block's clinic day about a
+        month ahead. Until somebody types it into Settings, that resident shows as <b>"clinic day not decided yet"</b>:
+        they are listed separately, they are not counted in the day's totals, and they never appear on a date the tool made up.
+        The clinic day is stored <b>per block</b>, because it changes when the rotation changes.</p>
         <p>A resident on their elective day gets the <b>full</b> template for that weekday, exactly like an outpatient resident.</p></div>
 
       <div class="rulecard"><h4>Slot classes</h4>
@@ -552,11 +568,11 @@ function defaultSettings(){
   var res = {}, order = [];
   function add(list, level){
     list.forEach(function(r,i){
-      /* default elective weekday: round-robin Mon..Fri within each PGY level, in roster order */
-      var lvlIndex = i;
       res[r[0]] = {
         name: r[0], level: level, codes: r[1], active: true,
-        electiveDay: 1 + (lvlIndex % 5),
+        /* One clinic weekday per block, for E and A blocks only. The programme decides these
+           roughly a month ahead. null = not decided yet. The tool NEVER invents one. */
+        electiveDays: new Array(12).fill(null),
         partner: '', lane: 'Lane ' + LANE_LETTERS[i % LANE_LETTERS.length]
       };
       order.push(r[0]);
@@ -601,7 +617,24 @@ function loadSettings(){
       bannerDismissed: !!saved.bannerDismissed,
       templates: saved.templates || d.templates
     };
+    normaliseElectiveDays();
   }catch(e){ console.warn('Could not read saved settings — using defaults.', e); }
+}
+/* Older saves kept one elective day for the whole year. Spread it across the 12 blocks
+   so nobody loses work, and make sure every resident has a 12-long array. */
+function normaliseElectiveDays(){
+  Object.keys(S.residents).forEach(function(k){
+    var r = S.residents[k];
+    if(!Array.isArray(r.electiveDays)){
+      var old = (typeof r.electiveDay === 'number' && r.electiveDay >= 1 && r.electiveDay <= 5) ? r.electiveDay : null;
+      r.electiveDays = new Array(12).fill(old);
+    }
+    while(r.electiveDays.length < 12) r.electiveDays.push(null);
+    r.electiveDays = r.electiveDays.slice(0,12).map(function(d){
+      return (d >= 1 && d <= 5) ? +d : null;
+    });
+    delete r.electiveDay;
+  });
 }
 function persist(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }
@@ -675,6 +708,19 @@ function codeFor(name, iso){
   return (r.codes || '').charAt(b.n - 1) || 'N';
 }
 
+/* The one clinic weekday for this resident in this block, or null when the programme
+   has not decided it yet. This is the only source of an elective day — it is never guessed. */
+function electiveDayFor(name, blockN){
+  var r = R(name);
+  if(!r || !Array.isArray(r.electiveDays)) return null;
+  var d = r.electiveDays[blockN - 1];
+  return (d >= 1 && d <= 5) ? d : null;
+}
+function hasUndecidedDay(name, blockN){
+  var c = (R(name) || {codes:''}).codes.charAt(blockN - 1);
+  return (c === 'E' || c === 'A') && electiveDayFor(name, blockN) === null;
+}
+
 function availabilityFor(resident, date){
   return availabilityDetail(resident, date).status;
 }
@@ -691,34 +737,63 @@ function availabilityDetail(resident, date){
   if(!isWeekday(date)){ out.why = 'Clinic runs Monday to Friday only.'; return out; }
   var code = (r.codes || '').charAt(b.n - 1) || 'N';
   out.code = code;
-  out.electiveDay = r.electiveDay;
+  var ed = electiveDayFor(name, b.n);
+  out.electiveDay = ed;
   var w = weekdayOf(date);
 
   if(code === 'O'){ out.status = 'FULL'; out.why = 'Outpatient block — in clinic every weekday of ' + b.label + '.'; return out; }
   if(code === 'N'){ out.status = 'NONE'; out.why = 'Inpatient / nights / ICU in ' + b.label + ' — no clinic at all.'; return out; }
+
   if(code === 'A'){
     out.away = true;
     if(!S.awayAsElective){ out.status = 'NONE'; out.why = 'Away rotation in ' + b.label + ' — set to "no clinic" in Settings.'; return out; }
-    out.status = (w === r.electiveDay) ? 'ELECTIVE_DAY' : 'NONE';
-    out.why = 'Away rotation in ' + b.label + ' — treated as one clinic day a week (' + WD_NAME[r.electiveDay] + '). Please confirm.';
+    if(ed === null){
+      out.status = 'ELECTIVE_TBD';
+      out.why = 'Away rotation in ' + b.label + ' — one clinic day a week, but which day is not decided yet. Ring to confirm, then set it in Settings.';
+      return out;
+    }
+    out.status = (w === ed) ? 'ELECTIVE_DAY' : 'NONE';
+    out.why = 'Away rotation in ' + b.label + ' — clinic on ' + WD_NAME[ed] + '. Please confirm before booking.';
     return out;
   }
+
   /* code E, or anything unrecognised, behaves as "one clinic day a week" */
-  out.status = (w === r.electiveDay) ? 'ELECTIVE_DAY' : 'NONE';
+  if(ed === null){
+    out.status = 'ELECTIVE_TBD';
+    out.why = 'Elective-type block ' + b.label + ' — one clinic day a week, but the programme has not set which day yet. ' +
+              'They usually decide about a month ahead. Set it in Settings once you know.';
+    return out;
+  }
+  out.status = (w === ed) ? 'ELECTIVE_DAY' : 'NONE';
   out.why = (out.status === 'ELECTIVE_DAY')
-    ? 'Elective-type block ' + b.label + ' — clinic on ' + WD_NAME[r.electiveDay] + '.'
-    : 'Elective-type block ' + b.label + ' — clinic only on ' + WD_NAME[r.electiveDay] + '.';
+    ? 'Elective-type block ' + b.label + ' — clinic on ' + WD_NAME[ed] + '.'
+    : 'Elective-type block ' + b.label + ' — clinic only on ' + WD_NAME[ed] + '.';
   return out;
 }
 
-/* residentsOnDate — everybody with FULL, or E/A whose weekday matches. */
+/* residentsOnDate — everybody KNOWN to be in clinic: FULL, or E/A whose set weekday matches.
+   A resident whose clinic day has not been decided is never included here. */
 function residentsOnDate(date){
   var out = [];
   activeResidents().forEach(function(r){
     var d = availabilityDetail(r.name, date);
     if(d.status === 'FULL' || d.status === 'ELECTIVE_DAY'){
       out.push({name:r.name, level:r.level, status:d.status, away:d.away, code:d.code,
-                electiveDay:r.electiveDay, partner:r.partner, lane:r.lane});
+                electiveDay:d.electiveDay, partner:r.partner, lane:r.lane});
+    }
+  });
+  return out;
+}
+
+/* residentsUndecidedOnDate — on an E or A block whose clinic day nobody has set yet.
+   They MIGHT be in clinic on this date. The scheduler has to find out and enter it. */
+function residentsUndecidedOnDate(date){
+  var b = blockForDate(date), out = [];
+  if(!b || !isWeekday(date)) return out;
+  activeResidents().forEach(function(r){
+    if(availabilityDetail(r.name, date).status === 'ELECTIVE_TBD'){
+      out.push({name:r.name, level:r.level, status:'ELECTIVE_TBD', code:r.codes.charAt(b.n-1),
+                block:b.n, partner:r.partner, lane:r.lane});
     }
   });
   return out;
@@ -867,6 +942,9 @@ function adviseBooking(opts){
     iso = addDays(iso,1); guard++;
   }
 
+  /* which blocks in the window are "one day a week, day not decided"? */
+  out.undecidedBlocks = undecidedBlocksIn(name, winStart, winEnd);
+
   /* nothing in the window → nearest clinic dates either side, never a dead end */
   if(out.dates.length === 0){
     var before = prevClinicDates(name, addDays(winStart,-1), 2);
@@ -878,9 +956,20 @@ function adviseBooking(opts){
     var choices = [];
     if(before[0]) choices.push(prettyDate(before[0]));
     if(after[0])  choices.push(prettyDate(after[0]));
-    var line = drName(name) + ' has no clinic in that window' + (blockNote ? ' — ' + blockNote : '') + '. ';
-    if(choices.length) line += 'Nearest dates are ' + choices.join(' or ') + '. ';
-    else line += 'There is no other clinic date for them inside this academic year. ';
+    var line;
+    if(out.undecidedBlocks.length){
+      /* Do not say "no clinic" when the truth is "nobody has told me yet". */
+      var ub = out.undecidedBlocks;
+      line = drName(name) + ' is on an elective-type rotation in ' +
+        ub.map(function(x){ return x.label + ' (' + x.dates + ')'; }).join(' and ') +
+        ', so they DO have one clinic day a week — but which weekday has not been set in this tool, ' +
+        'so it cannot tell you the dates. Ask the chief resident, then enter it in Settings. ';
+      if(choices.length) line += 'Their nearest CONFIRMED dates are ' + choices.join(' or ') + '. ';
+    } else {
+      line = drName(name) + ' has no clinic in that window' + (blockNote ? ' — ' + blockNote : '') + '. ';
+      if(choices.length) line += 'Nearest dates are ' + choices.join(' or ') + '. ';
+      else line += 'There is no other clinic date for them inside this academic year. ';
+    }
 
     if(cont === 'C1'){
       line += '"Must see own doctor" → book one of those dates.';
@@ -949,13 +1038,30 @@ function awayOrOffNote(name, a, b){
       if(c === 'N') notes.push('on Inpatient ' + prettyDate(blk.s) + '–' + prettyDate(blk.e));
       else if(c === 'A') notes.push('on an away rotation ' + prettyDate(blk.s) + '–' + prettyDate(blk.e));
       else if(c === 'E'){
-        var r = R(name);
-        notes.push('only in clinic on ' + WD_NAME[r ? r.electiveDay : 1] + 's during ' + blk.label);
+        var ed = electiveDayFor(name, blk.n);
+        notes.push(ed ? 'only in clinic on ' + WD_NAME[ed] + 's during ' + blk.label
+                      : 'on an elective-type rotation in ' + blk.label + ' whose clinic day is not decided yet');
       }
     }
     iso = addDays(iso, 7); guard++;
   }
   return notes.slice(0,2).join(' and ');
+}
+
+/* Blocks inside a date range where this resident is on E/A with no clinic day set. */
+function undecidedBlocksIn(name, a, b){
+  var seen = {}, out = [], iso = a, guard = 0;
+  while(iso <= b && guard++ < 500){
+    var blk = blockForDate(iso);
+    if(blk && !seen[blk.n]){
+      seen[blk.n] = true;
+      if(hasUndecidedDay(name, blk.n)){
+        out.push({n:blk.n, label:blk.label, dates: prettyDate(blk.s)+'–'+prettyDate(blk.e)});
+      }
+    }
+    iso = addDays(iso, 1); guard++;
+  }
+  return out;
 }
 
 function firstThinDate(a, b, attendings){
@@ -989,12 +1095,15 @@ function blockStrip(name, today){
   var nowBlk = blockForDate(today || todayISO());
   return BLOCKS.map(function(b, i){
     var c = (r.codes || '').charAt(i) || 'N';
+    var ed = electiveDayFor(name, b.n);
+    var undecided = (c === 'E' || c === 'A') && ed === null;
     var label = c === 'O' ? 'full clinic'
               : c === 'N' ? 'no clinic'
-              : c === 'A' ? 'away — confirm'
-              : WD_SHORT[r.electiveDay] + ' only';
+              : undecided ? 'day not set'
+              : c === 'A' ? WD_SHORT[ed] + ' — confirm'
+              : WD_SHORT[ed] + ' only';
     return {n:b.n, code:c, label:label, dates: prettyDate(b.s)+'–'+prettyDate(b.e),
-            current: !!(nowBlk && nowBlk.n === b.n)};
+            undecided: undecided, current: !!(nowBlk && nowBlk.n === b.n)};
   });
 }
 
@@ -1320,6 +1429,9 @@ function go(tab){
   el('tab-'+tab).classList.remove('hidden');
   document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('on', b.dataset.tab===tab); });
   window.scrollTo({top:0, behavior:'smooth'});
+  /* Always redraw the tab being opened, so a settings change is never shown stale. */
+  if(tab==='who')  renderWho();
+  if(tab==='when' && el('t2res').value && el('whenOut').innerHTML) renderWhen();
   if(tab==='year' && !el('yearOut').innerHTML) renderHeatmap();
   if(tab==='day'  && !el('dayRoster').innerHTML) renderDayRoster();
   if(tab==='set'  && !el('setRoster').innerHTML) renderSettings();
@@ -1337,6 +1449,7 @@ function weekdayBadge(w){
   return '<span class="badge b-day">'+WD_NAME[w]+' — full day</span>';
 }
 function statusBadge(r){
+  if(r.status==='ELECTIVE_TBD') return '<span class="badge b-tbd">clinic day not decided yet</span>';
   if(r.away) return '<span class="badge b-away">away — confirm ('+WD_SHORT[r.electiveDay]+')</span>';
   if(r.status==='FULL') return '<span class="badge b-full">FULL WEEK</span>';
   return '<span class="badge b-elec">elective day ('+WD_SHORT[r.electiveDay]+')</span>';
@@ -1353,6 +1466,7 @@ function renderWho(){
   var b = blockForDate(date);
   if(!b){ out.innerHTML = '<div class="card"><div class="banner bad">'+esc(outsideYearMessage(date))+'</div></div>'; return; }
   var w = weekdayOf(date), present = residentsOnDate(date), cap = computeCapacity(date, att, present);
+  var undecided = residentsUndecidedOnDate(date);
 
   var html = '<div class="card"><h2>'+esc(longDate(date))+'</h2>'+
     '<p class="sub">Block '+b.n+' &nbsp;·&nbsp; '+esc(b.dates)+'</p>'+ weekdayBadge(w);
@@ -1362,14 +1476,20 @@ function renderWho(){
     out.innerHTML = html; return;
   }
   html += '<div class="tiles">'+
-    tile('blue','Residents today', present.length, 'from the block schedule for B'+b.n) +
+    tile('blue','Residents in clinic', present.length,
+         'confirmed from the block schedule for B'+b.n +
+         (undecided.length ? ' — plus '+undecided.length+' whose clinic day is not decided yet' : '')) +
     tile('teal','Template slots', cap.slots, 'every slot in everybody’s template'+(w===4?' (Thu AM only)':'')) +
     tile('green','Target total', cap.targetTotal, describeTargets(w)) +
     tile('amber','Supervision cap', cap.cap, cap.rules.cap) +
     tile('purple','Room for advance bookings', cap.ceilingTotal, 'sum of each ceiling = '+cap.rules.ceiling) +
     '</div>';
-  if(cap.thin) html += '<div class="banner warn"><b>Thin day.</b> Only '+present.length+' resident(s) in clinic. Keep routine bookings off this date if you can.</div>';
-  if(present.length===0) html += '<div class="banner bad">Nobody is in clinic on this date. Try another weekday.</div>';
+  if(undecided.length) html += '<div class="banner warn"><b>'+undecided.length+' resident(s) might also be in clinic.</b> '+
+    'They are on an elective-type block and nobody has told this tool which weekday they come in. '+
+    'This tool will not guess. Check with the chief resident, then enter the day in Settings — they are listed below.</div>';
+  if(cap.thin) html += '<div class="banner warn"><b>Thin day.</b> Only '+present.length+' confirmed resident(s) in clinic. Keep routine bookings off this date if you can.</div>';
+  if(present.length===0) html += '<div class="banner bad">Nobody is confirmed in clinic on this date'+
+    (undecided.length ? ' — but see the '+undecided.length+' resident(s) below whose clinic day is still undecided.' : '. Try another weekday.')+'</div>';
   if(cap.overSupervision) html += '<div class="banner bad"><b>Over supervision.</b> Targets add up to '+cap.targetTotal+
     ' but '+att+' attending(s) can only precept '+cap.cap+'. Add an attending, or plan to book only '+cap.bookable+'.</div>';
   html += '</div>';
@@ -1384,6 +1504,19 @@ function renderWho(){
     return s + '</div>';
   }
   html += '<div class="twocol">'+col('PGY-2')+col('PGY-1')+'</div>';
+
+  if(undecided.length){
+    html += '<div class="card"><h3>Clinic day not decided yet &nbsp;<span class="rule">'+undecided.length+' resident(s)</span></h3>'+
+      '<p class="sub">These residents are on an elective-type or away block in B'+b.n+'. They come to clinic one weekday a week, but which weekday has not been '+
+      'set in this tool, so they are <b>not</b> counted above and you should not book them on this date until you know. '+
+      'The programme usually decides about a month ahead.</p>';
+    undecided.forEach(function(r){
+      html += '<div class="chip"><span class="nm">'+esc(r.name)+' <span class="rule">'+r.level+' · code '+esc(r.code)+'</span></span>'+
+        '<span><span class="badge b-tbd">day not set</span> '+
+        '<button class="btn ghost sm" onclick="go(\'set\')">Set it</button></span></div>';
+    });
+    html += '</div>';
+  }
   out.innerHTML = html;
 }
 
@@ -1399,18 +1532,25 @@ function renderWhen(){
     attendings: S.attendings, booked: whenBooked
   });
   var strip = res.strip.map(function(b){
-    return '<div class="blk '+b.code+(b.current?' now':'')+'" title="Block '+b.n+' · '+esc(b.dates)+' · '+esc(b.label)+'">'+
+    return '<div class="blk '+b.code+(b.undecided?' tbd':'')+(b.current?' now':'')+
+           '" title="Block '+b.n+' · '+esc(b.dates)+' · '+esc(b.label)+'">'+
            '<b>B'+b.n+'</b>'+esc(b.label)+'</div>';
   }).join('');
 
   var html = '<div class="card"><h2>'+esc(drName(name))+' &nbsp;<span class="rule">'+esc(name)+' · '+esc(levelOf(name))+'</span></h2>'+
-    '<p class="sub">The whole year at a glance for this doctor. Green = in clinic all week · yellow = one day a week · grey = no clinic · striped = away.</p>'+
+    '<p class="sub">The whole year at a glance for this doctor. Green = in clinic all week · yellow = one day a week (the day is shown) · '+
+    'grey = no clinic · purple stripes = away · amber stripes = one day a week but <b>nobody has set which day yet</b>.</p>'+
     '<div class="strip">'+strip+'</div>'+
     '<p class="rule">Window searched: '+esc(prettyDate(res.windowStart))+' to '+esc(prettyDate(res.windowEnd))+
     ' (' + el('t2weeks').value + ' weeks out, ± ' + el('t2tol').value + ' weeks).</p></div>';
 
   html += '<div class="card"><div class="reco'+(res.dates.length?'':' none')+'">'+esc(res.recommendation)+'</div>'+
-          '<p class="rule" style="margin-top:10px">'+esc(res.ruleNote)+'</p></div>';
+          '<p class="rule" style="margin-top:10px">'+esc(res.ruleNote)+'</p>'+
+          ((res.undecidedBlocks && res.undecidedBlocks.length)
+            ? '<div class="banner warn" style="margin-top:10px">Clinic day still to be decided for '+
+              res.undecidedBlocks.map(function(x){ return 'Block '+x.n; }).join(' and ')+
+              '. <button class="btn ghost sm" onclick="go(\'set\')">Set it in Settings</button></div>' : '')+
+          '</div>';
 
   function dateTable(list, title){
     if(!list.length) return '';
@@ -1447,8 +1587,11 @@ function renderHeatmap(){
       'September','October','November','December'][d.getMonth()] + ' ' + d.getFullYear(), days: [], firstWd: null}; months.push(key); }
     if(isWeekday(iso)){
       var list = residentsOnDate(iso);
+      var maybe = residentsUndecidedOnDate(iso);
       if(byMonth[key].firstWd === null) byMonth[key].firstWd = weekdayOf(iso);
-      byMonth[key].days.push({iso:iso, n:list.length, names:list.map(function(r){ return r.name + (r.status==='ELECTIVE_DAY'?' (elective)':''); })});
+      byMonth[key].days.push({iso:iso, n:list.length, tbd:maybe.length,
+        names:list.map(function(r){ return r.name + (r.status==='ELECTIVE_DAY'?' (elective day)':''); }),
+        maybeNames:maybe.map(function(r){ return r.name; })});
     }
     iso = addDays(iso,1);
   }
@@ -1460,10 +1603,13 @@ function renderHeatmap(){
     for(var i=1;i<m.firstWd;i++) html += '<div class="hm-d blank"></div>';
     m.days.forEach(function(day){
       var cls = day.n===0 ? 'zero' : (day.n<4 ? 'thin' : (day.n<10 ? 'good' : 'heavy'));
-      var title = prettyDate(day.iso)+' — '+day.n+' resident'+(day.n===1?'':'s')+' in clinic'+
-                  (day.n? ':\n'+day.names.join('\n') : ' (nobody)');
+      if(day.tbd) cls += ' hastbd';
+      var title = prettyDate(day.iso)+' — '+day.n+' resident'+(day.n===1?'':'s')+' confirmed in clinic'+
+                  (day.n? ':\n'+day.names.join('\n') : ' (nobody confirmed)');
+      if(day.tbd) title += '\n\n+'+day.tbd+' whose clinic day is not decided yet:\n'+day.maybeNames.join('\n');
       html += '<div class="hm-d '+cls+'" data-date="'+day.iso+'" title="'+esc(title)+'" onclick="jumpToDate(\''+day.iso+'\')">'+
-        '<span class="dn">'+parseISO(day.iso).getDate()+'</span><span class="ct">'+day.n+'</span></div>';
+        '<span class="dn">'+parseISO(day.iso).getDate()+'</span><span class="ct">'+day.n+'</span>'+
+        (day.tbd ? '<span class="tbd">+'+day.tbd+'?</span>' : '')+'</div>';
     });
     html += '</div></div>';
   });
@@ -1510,9 +1656,13 @@ function updateDayBanner(){
   if(!b){ host.innerHTML = ''; return; }
   var w = weekdayOf(date), present = residentsOnDate(date);
   var cap = computeCapacity(date, +el('t4att').value||3, present);
+  var maybe = residentsUndecidedOnDate(date);
   host.innerHTML = '<div class="banner info">Block '+b.n+' · '+esc(b.dates)+' · '+WD_NAME[w]+
     (w===4?' (morning only)':(w===5?' (starts 9:00)':''))+' · '+present.length+' resident(s) · supervision cap '+cap.cap+
-    ' <span class="rule">('+esc(cap.rules.cap)+')</span></div>';
+    ' <span class="rule">('+esc(cap.rules.cap)+')</span></div>' +
+    (maybe.length ? '<div class="banner warn">'+maybe.length+' resident(s) are missing from this list because nobody has set '+
+      'their clinic day for this block: '+esc(maybe.map(function(r){ return r.name; }).join(', '))+'. '+
+      'If they are in today, set the day in Settings and reload the roster.</div>' : '');
 }
 function readDayInputs(){
   var rows = Array.prototype.slice.call(document.querySelectorAll('#dayTable tr[data-name]'));
@@ -1734,22 +1884,33 @@ function renderSettings(){
   var names = S.order.slice();
   var head = '<tr><th>Resident</th><th>Level</th><th>Active</th>';
   for(var i=1;i<=12;i++) head += '<th style="text-align:center">B'+i+'</th>';
-  head += '<th>Elective clinic day</th><th>Firm partner</th><th>Lane</th></tr>';
+  head += '<th>Set every E/A block to</th><th>Firm partner</th><th>Lane</th></tr>';
   var body = names.map(function(n){
     var r = R(n); if(!r) return '';
     var cells = '';
     for(var i=0;i<12;i++){
-      cells += '<td style="padding:2px"><input class="code-in" data-name="'+esc(n)+'" data-i="'+i+'" maxlength="1" '+
-        'value="'+esc((r.codes||'').charAt(i)||'N')+'" style="width:30px;text-align:center;padding:5px 2px;min-height:32px" '+
-        'oninput="this.value=this.value.toUpperCase().replace(/[^ONEA]/g,\'\')"></td>';
+      var code = (r.codes||'').charAt(i) || 'N';
+      var needsDay = (code === 'E' || code === 'A');
+      var cur = (Array.isArray(r.electiveDays) && r.electiveDays[i] >= 1 && r.electiveDays[i] <= 5) ? r.electiveDays[i] : '';
+      var dOpts = '<option value="">—</option>' + [1,2,3,4,5].map(function(d){
+        return '<option value="'+d+'"'+(cur===d?' selected':'')+'>'+WD_SHORT[d]+'</option>'; }).join('');
+      cells += '<td style="padding:2px;text-align:center">'+
+        '<input class="code-in" data-name="'+esc(n)+'" data-i="'+i+'" maxlength="1" '+
+          'value="'+esc(code)+'" style="width:34px;text-align:center;padding:5px 2px;min-height:30px" '+
+          'oninput="this.value=this.value.toUpperCase().replace(/[^ONEA]/g,\'\'); syncDayCell(this)">'+
+        '<select class="eday-in" data-name="'+esc(n)+'" data-i="'+i+'" '+(needsDay?'':'disabled ')+
+          'style="width:52px;margin-top:2px;padding:3px 2px;min-height:28px;font-size:12px;opacity:'+(needsDay?'1':'.35')+'" '+
+          'title="Which weekday does this resident come to clinic during this block? Leave as — if it is not decided yet.">'+
+          dOpts+'</select></td>';
     }
     var partnerOpts = '<option value="">— none —</option>' + names.filter(function(x){ return x!==n; })
       .map(function(x){ return '<option value="'+esc(x)+'"'+(r.partner===x?' selected':'')+'>'+esc(x)+'</option>'; }).join('');
-    var dayOpts = [1,2,3,4,5].map(function(d){ return '<option value="'+d+'"'+(r.electiveDay===d?' selected':'')+'>'+WD_NAME[d]+'</option>'; }).join('');
+    var bulkOpts = '<option value="">—</option>' + [1,2,3,4,5].map(function(d){
+      return '<option value="'+d+'">'+WD_NAME[d]+'</option>'; }).join('');
     return '<tr><td><b>'+esc(n)+'</b></td><td>'+r.level+'</td>'+
       '<td style="text-align:center"><input type="checkbox" class="act-in" data-name="'+esc(n)+'"'+(r.active?' checked':'')+'></td>'+
       cells +
-      '<td><select class="day-in" data-name="'+esc(n)+'">'+dayOpts+'</select></td>'+
+      '<td><select onchange="bulkSetDay(this)" title="Fills every E and A block in this row with the same weekday.">'+bulkOpts+'</select></td>'+
       '<td><select class="ptn-in" data-name="'+esc(n)+'">'+partnerOpts+'</select></td>'+
       '<td><input class="lane-in" data-name="'+esc(n)+'" value="'+esc(r.lane||'')+'" style="width:92px"></td></tr>';
   }).join('');
@@ -1776,7 +1937,11 @@ function saveSettings(announce){
   S.awayAsElective = el('sAway').value === '1';
 
   document.querySelectorAll('.act-in').forEach(function(i){ R(i.dataset.name).active = i.checked; });
-  document.querySelectorAll('.day-in').forEach(function(i){ R(i.dataset.name).electiveDay = +i.value; });
+  document.querySelectorAll('.eday-in').forEach(function(i){
+    var r = R(i.dataset.name), k = +i.dataset.i;
+    if(!Array.isArray(r.electiveDays)) r.electiveDays = new Array(12).fill(null);
+    r.electiveDays[k] = (i.value === '') ? null : +i.value;
+  });
   document.querySelectorAll('.ptn-in').forEach(function(i){ R(i.dataset.name).partner = i.value; });
   document.querySelectorAll('.lane-in').forEach(function(i){ R(i.dataset.name).lane = i.value; });
   document.querySelectorAll('.code-in').forEach(function(i){
@@ -1788,6 +1953,23 @@ function saveSettings(announce){
   refreshAll();
   if(announce) alert('Settings saved in this browser.');
 }
+/* Enable or grey out the weekday picker as the block code is typed. */
+function syncDayCell(inp){
+  var sel = inp.parentNode.querySelector('.eday-in');
+  if(!sel) return;
+  var on = (inp.value === 'E' || inp.value === 'A');
+  sel.disabled = !on;
+  if(!on) sel.value = '';
+  sel.style.opacity = on ? '1' : '.35';
+}
+/* Fill every E/A block in one resident's row with the same weekday. */
+function bulkSetDay(sel){
+  var tr = sel.closest('tr'), v = sel.value;
+  if(!tr || v === '') return;
+  tr.querySelectorAll('.eday-in').forEach(function(d){ if(!d.disabled) d.value = v; });
+  sel.value = '';
+}
+
 function saveTemplates(){
   document.querySelectorAll('.tpl-in').forEach(function(ta){
     var lvl = ta.dataset.lvl, d = +ta.dataset.d, out = [];
@@ -1891,16 +2073,27 @@ function runSelfTests(){
   /* 2 — availability for Arjun Dhir */
   t('2. availabilityFor follows O / N / E / A', function(){
     var r = R('Arjun Dhir');
-    function expect(iso){ return weekdayOf(iso) === r.electiveDay ? 'ELECTIVE_DAY' : 'NONE'; }
-    var a = availabilityFor('Arjun Dhir','2026-09-15');            /* B3 = E */
-    if(a !== expect('2026-09-15')) return 'B3 (E) on 2026-09-15: got '+a;
-    if(a !== 'ELECTIVE_DAY' && a !== 'NONE') return 'B3 must be ELECTIVE_DAY or NONE';
-    var b = availabilityFor('Arjun Dhir','2026-12-10');            /* B6 = E */
-    if(b !== expect('2026-12-10')) return 'B6 (E) on 2026-12-10: got '+b;
+    /* Out of the box no elective day is set for anyone, so an E block is "not decided yet". */
+    if(availabilityFor('Arjun Dhir','2026-09-15') !== 'ELECTIVE_TBD')
+      return 'B3 (E) with no clinic day set should be ELECTIVE_TBD';
+    /* Now the scheduler enters the real days: B3 Monday, B6 Thursday. */
+    r.electiveDays[2] = 1;   /* B3 = Monday */
+    r.electiveDays[5] = 4;   /* B6 = Thursday */
+    var mon = availabilityFor('Arjun Dhir','2026-08-31');          /* B3, a Monday */
+    if(mon !== 'ELECTIVE_DAY') return 'B3 Monday should be ELECTIVE_DAY, got '+mon;
+    var tue = availabilityFor('Arjun Dhir','2026-09-15');          /* B3, a Tuesday */
+    if(tue !== 'NONE') return 'B3 Tuesday should be NONE once the day is Monday, got '+tue;
+    var thu = availabilityFor('Arjun Dhir','2026-12-10');          /* B6, a Thursday */
+    if(thu !== 'ELECTIVE_DAY') return 'B6 Thursday should be ELECTIVE_DAY, got '+thu;
+    if(availabilityFor('Arjun Dhir','2026-12-09') !== 'NONE') return 'B6 Wednesday should be NONE';
+    /* Blocks the scheduler has not touched are still undecided, not invented. */
+    if(availabilityFor('Arjun Dhir','2027-04-01') !== 'ELECTIVE_TBD')
+      return 'B10 (E) was never set, so it must stay ELECTIVE_TBD';
     var c = availabilityFor('Arjun Dhir','2026-08-05');            /* B2 = N */
     if(c !== 'NONE') return 'B2 (N) on 2026-08-05 should be NONE, got '+c;
     var d = availabilityFor('Arjun Dhir','2027-02-10');            /* B8 = O */
     if(d !== 'FULL') return 'B8 (O) on 2027-02-10 should be FULL, got '+d;
+    r.electiveDays[2] = null; r.electiveDays[5] = null;
     return true;
   });
 
@@ -1910,11 +2103,20 @@ function runSelfTests(){
     var must = ['Emily Angeles Mancinas','Rudrani Kotha','Jorge Reynoso Figueroa','Poonam Tawde',
                 'Gaston Rodriguez','Savad Torres'];
     for(var i=0;i<must.length;i++) if(names.indexOf(must[i]) < 0) return 'missing ' + must[i];
+    /* With no clinic days entered, ONLY outpatient-block residents may appear. */
     for(var j=0;j<list.length;j++){
       var r = list[j];
-      if(r.status === 'ELECTIVE_DAY' && r.electiveDay !== 3) return r.name + ' is listed on a Wednesday but their elective day is ' + WD_NAME[r.electiveDay];
-      if(r.status === 'FULL' && codeFor(r.name,'2026-09-16') !== 'O') return r.name + ' is FULL but not on an O block';
+      if(r.status !== 'FULL') return r.name + ' appeared without a clinic day being set — the tool guessed';
+      if(codeFor(r.name,'2026-09-16') !== 'O') return r.name + ' is FULL but not on an O block';
     }
+    /* Once the scheduler sets Wednesdays, the E residents join the list. */
+    R('Arjun Dhir').electiveDays[2] = 3;
+    var after = residentsOnDate('2026-09-16');
+    var dhir = after.filter(function(x){ return x.name === 'Arjun Dhir'; })[0];
+    if(!dhir) return 'Arjun Dhir should appear once his B3 clinic day is set to Wednesday';
+    if(dhir.status !== 'ELECTIVE_DAY' || dhir.electiveDay !== 3) return 'wrong status for a set elective day';
+    if(after.length !== list.length + 1) return 'setting one day changed more than one resident';
+    R('Arjun Dhir').electiveDays[2] = null;
     return true;
   });
 
@@ -2021,6 +2223,38 @@ function runSelfTests(){
       if(/:\n/.test(title)) withNames++;
     }
     if(withNames < 200) return 'hover names are missing on most days ('+withNames+')';
+    return true;
+  });
+
+  /* 9 — the tool never invents a clinic day */
+  t('9. an undecided clinic day is never guessed, never booked, never counted', function(){
+    var name = 'Angelo Soukovelos';                 /* PGY-2, B3 = E */
+    if(codeFor(name,'2026-08-31') !== 'E') return 'setup wrong: expected an E block';
+    /* Across every weekday of B3 he must never be reported as in clinic. */
+    var iso = '2026-08-26', guard = 0, seen = 0;
+    while(iso <= '2026-09-29' && guard++ < 60){
+      if(isWeekday(iso)){
+        if(availabilityFor(name, iso) !== 'ELECTIVE_TBD') return 'guessed a status on ' + iso;
+        if(residentsOnDate(iso).some(function(r){ return r.name === name; })) return 'counted as in clinic on ' + iso;
+        if(!residentsUndecidedOnDate(iso).some(function(r){ return r.name === name; })) return 'not flagged as undecided on ' + iso;
+        seen++;
+      }
+      iso = addDays(iso,1);
+    }
+    if(seen < 20) return 'did not cover the block';
+    /* He must not be silently inflating the day's capacity either. */
+    var before = computeCapacity('2026-08-31', 3).residents;
+    R(name).electiveDays[2] = 1;                    /* B3 = Monday, 2026-08-31 is a Monday */
+    var after = computeCapacity('2026-08-31', 3).residents;
+    if(after !== before + 1) return 'setting the day did not add exactly one resident';
+    if(availabilityFor(name,'2026-08-31') !== 'ELECTIVE_DAY') return 'a set Monday should read ELECTIVE_DAY';
+    if(availabilityFor(name,'2026-09-01') !== 'NONE') return 'Tuesday should be NONE when the day is Monday';
+    /* Tab 2 must say "not decided", not "no clinic". */
+    R(name).electiveDays[2] = null;
+    var adv = adviseBooking({resident:name, from:'2026-08-26', weeks:2, tol:1, visitType:'EST', continuity:'C2'});
+    if(!adv.undecidedBlocks || !adv.undecidedBlocks.length) return 'Tab 2 did not flag the undecided block';
+    if(/has no clinic in that window/.test(adv.recommendation)) return 'Tab 2 wrongly said "no clinic" instead of "not decided yet"';
+    if(!/not been set|not decided/.test(adv.recommendation)) return 'Tab 2 did not explain that the day is undecided';
     return true;
   });
 

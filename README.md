@@ -21,13 +21,31 @@ patient is stored anywhere.
 Open `index.html` in any browser, or visit the deployed site. Then do this once:
 
 1. Go to **Settings**.
-2. For every resident, set their **real elective clinic day** (the one weekday a week they
-   come to clinic when they are on an elective-type rotation). Until you do, the tool spreads
-   them Monday→Friday down the list as a best guess and shows a yellow warning banner.
+2. Under every `E` and `A` block in the roster table there is a small weekday box. Set it to the
+   day that resident actually comes to clinic during that block. Leave it on `—` for any block
+   the programme has not decided yet.
 3. Check the **firm partners** and **lane labels** match how your clinic actually runs.
 4. Press **Save settings**.
 
 That's it. Your settings stay in this browser until you change them.
+
+### The tool never guesses a clinic day
+
+This matters more than anything else in the app, so it is worth being blunt about.
+
+A resident on an `E` or `A` block comes to clinic **one weekday a week**, and the programme
+usually decides which weekday only about a month ahead. If a tool invents that day, it will
+confidently tell you a resident is free on a day they are on service — or, worse, tell you they
+are unavailable on a day they are actually sitting in clinic.
+
+So TEMPO does not invent it. Until somebody types the day into Settings, that resident shows as
+**"clinic day not decided yet"**. They are listed separately on Tab 1, they are **not** counted in
+the day's totals, they never appear in the heatmap counts, and Tab 2 says *"the clinic day has not
+been set"* rather than *"no clinic"*. A blank is always safer than a guess.
+
+The clinic day is stored **per block**, because it changes when the rotation changes. If a
+resident has the same day all year, the **Set every E/A block to** column at the end of their row
+fills all of them in one go.
 
 ---
 
@@ -56,12 +74,21 @@ the clinic pattern:
 |---|---|---|
 | **O** | Outpatient block | In clinic **every weekday** of that block |
 | **N** | Inpatient, night float, ICU | **No clinic at all** that block |
-| **E** | Everything else — elective, SNF, ED Obs, community / ILE | **One fixed weekday** each week, set in Settings |
+| **E** | Everything else — elective, SNF, ED Obs, community / ILE | **One fixed weekday** each week — you set it in Settings, per block |
 | **A** | Away rotation — BUMCP, Mayo, Gateway, NIH | Treated like **E**, but flagged **"away — confirm"**. Toggleable in Settings |
 
-`availabilityFor(resident, date)` returns `FULL`, `ELECTIVE_DAY` or `NONE`.
-`residentsOnDate(date)` is everyone who is `FULL`, plus every `E`/`A` resident whose elective
-weekday matches that date.
+`availabilityFor(resident, date)` returns one of four values:
+
+| Value | Meaning |
+|---|---|
+| `FULL` | Outpatient block — in clinic today |
+| `ELECTIVE_DAY` | `E`/`A` block and today matches the weekday you entered |
+| `ELECTIVE_TBD` | `E`/`A` block, but **nobody has set the weekday yet** — might be in clinic, unknown |
+| `NONE` | Not in clinic today |
+
+`residentsOnDate(date)` returns only the residents **known** to be in clinic — `FULL` plus
+`ELECTIVE_DAY`. `residentsUndecidedOnDate(date)` returns the `ELECTIVE_TBD` ones so the scheduler
+can chase them up. Nothing that is merely *possible* is ever counted as *booked*.
 
 A resident on their elective day gets the **full template** for that weekday — exactly the
 same as an outpatient resident.
@@ -154,8 +181,10 @@ The block schedule changes. You do not need a programmer to keep up with it.
 
 **The easy way — in the app.** Open **Settings → Roster and block schedule**. Every resident
 has twelve boxes, left to right, one per block. Type `O`, `N`, `E` or `A` into any box and
-press **Save settings**. You can also mark a resident **inactive** (they disappear from every
-tab), change their elective clinic day, their firm partner and their lane.
+press **Save settings**. The weekday box underneath each block lights up whenever that block is
+`E` or `A`; set it when the programme tells you the day, and leave it on `—` until then. You can
+also mark a resident **inactive** (they disappear from every tab), and change their firm partner
+and lane.
 
 Use **Export settings (JSON)** to save a copy, and **Import settings** to load it into another
 browser or share it with a colleague. **Reset settings** puts everything back to the built-in
@@ -187,7 +216,7 @@ Any other static host works the same way — GitHub Pages, Netlify, or just open
 
 ## Checking it still works
 
-Eight acceptance tests are built into the page and run every time it loads. Open the browser
+Nine acceptance tests are built into the page and run every time it loads. Open the browser
 console (or add `?selftest=1` to the URL to see them on the page):
 
 1. Block dates map correctly, and dates outside the year give a friendly message.
@@ -199,8 +228,11 @@ console (or add `?selftest=1` to the URL to see them on the page):
 7. The call-out cascade sends must-see patients to the partner up to 2 over target and lists
    the rest with their next clinic dates.
 8. The heatmap draws every weekday of the year with counts and hover names.
+9. A resident whose clinic day is undecided is never guessed onto a date, never counted in a
+   day's totals, and Tab 2 says "not decided yet" rather than "no clinic" — and setting the day
+   adds exactly that one resident.
 
-All eight report `PASS`.
+All nine report `PASS`.
 
 ---
 
