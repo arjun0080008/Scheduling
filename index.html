@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEMPO Scheduler — Book the Resident, Not the Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TEMPO Scheduler — light clinical console
+   ============================================================ */
+:root{
+  --page:#F7F9FB; --grid:#E9EFF4; --ink:#16202B; --muted:#5C6B7A;
+  --line:#DDE5EC; --card:#FFFFFF;
+  --blue:#0D47A1; --teal:#0B7A6E; --amber:#B7791F; --red:#B3261E;
+  --purple:#6A1B9A; --green:#2E7D32;
+  --blue-bg:#E8F0FC; --teal-bg:#E3F4F1; --amber-bg:#FBF2E0; --red-bg:#FCEAE8;
+  --purple-bg:#F3E9F8; --green-bg:#E7F4E8; --grey-bg:#EEF2F6;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background-color:var(--page);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:44px 44px;
+  color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  font-size:15px; line-height:1.5;
+}
+h1,h2,h3,h4,.brand,.tab,.tile-n{font-family:"Space Grotesk","IBM Plex Sans",system-ui,sans-serif}
+.mono,.num,input[type=number],.code-in,.tile-n,.rule{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 60px}
+
+/* ---------- top bar ---------- */
+header.top{position:sticky;top:0;z-index:50;background:rgba(247,249,251,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.brandrow{max-width:1240px;margin:0 auto;padding:14px 16px 0;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--blue)}
+.brand span{color:var(--teal)}
+.tagline{color:var(--muted);font-size:13px}
+.tabs{max-width:1240px;margin:0 auto;padding:10px 16px 12px;display:flex;gap:8px;flex-wrap:wrap}
+.tab{
+  flex:1 1 170px;min-height:58px;border:1px solid var(--line);background:var(--card);border-radius:var(--r);
+  padding:10px 12px;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink);text-align:left;line-height:1.25;
+  display:flex;flex-direction:column;justify-content:center;gap:2px;transition:.12s;
+}
+.tab small{display:block;font-family:"IBM Plex Sans";font-weight:400;color:var(--muted);font-size:11.5px}
+.tab:hover{border-color:#BFD2E4;transform:translateY(-1px)}
+.tab.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tab.on small{color:#CFE0F7}
+.tab.set{flex:0 1 130px}
+
+/* ---------- cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:14px 0}
+.card h2{margin:0 0 4px;font-size:18px}
+.card h3{margin:14px 0 6px;font-size:15px;color:var(--blue)}
+.sub{color:var(--muted);font-size:13px;margin:0 0 10px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+input,select,textarea,button{font-family:inherit;font-size:15px}
+input[type=date],input[type=number],input[type=text],select,textarea{
+  border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff;color:var(--ink);min-height:40px}
+input[type=number]{width:92px}
+textarea{width:100%;min-height:110px;font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+.btn{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:12px;padding:12px 18px;font-weight:600;cursor:pointer;min-height:44px}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:#fff;color:var(--blue)}
+.btn.big{font-size:17px;padding:16px 26px;width:100%;font-family:"Space Grotesk";letter-spacing:.01em}
+.btn.warn{background:var(--red);border-color:var(--red)}
+.btn.sm{padding:7px 12px;font-size:13px;min-height:36px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:20px;cursor:pointer;color:var(--blue);font-weight:600}
+.stepper input{width:60px;text-align:center}
+
+/* ---------- tiles ---------- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin:12px 0}
+.tile{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:#fff}
+.tile-l{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tile-n{font-size:30px;font-weight:700;line-height:1.1;margin:2px 0;font-family:"IBM Plex Mono",monospace}
+.rule{font-size:11px;color:var(--muted);line-height:1.35}
+.tile.blue{background:var(--blue-bg);border-color:#C6D9F5}.tile.blue .tile-n{color:var(--blue)}
+.tile.teal{background:var(--teal-bg);border-color:#BFE3DC}.tile.teal .tile-n{color:var(--teal)}
+.tile.amber{background:var(--amber-bg);border-color:#EBD9AE}.tile.amber .tile-n{color:var(--amber)}
+.tile.green{background:var(--green-bg);border-color:#C4E2C6}.tile.green .tile-n{color:var(--green)}
+.tile.purple{background:var(--purple-bg);border-color:#DEC7EB}.tile.purple .tile-n{color:var(--purple)}
+.tile.red{background:var(--red-bg);border-color:#F2C9C5}.tile.red .tile-n{color:var(--red)}
+
+/* ---------- badges / banners ---------- */
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid}
+.b-full{background:var(--green-bg);color:var(--green);border-color:#C4E2C6}
+.b-elec{background:var(--amber-bg);color:var(--amber);border-color:#EBD9AE}
+.b-away{background:var(--purple-bg);color:var(--purple);border-color:#DEC7EB}
+.b-none{background:var(--grey-bg);color:var(--muted);border-color:var(--line)}
+.b-day{background:var(--blue-bg);color:var(--blue);border-color:#C6D9F5;font-size:13px;padding:5px 12px}
+.banner{border-radius:12px;padding:11px 14px;margin:10px 0;font-size:14px;border:1px solid}
+.banner.warn{background:var(--amber-bg);border-color:#EBD9AE;color:#7A5310}
+.banner.bad{background:var(--red-bg);border-color:#F2C9C5;color:var(--red)}
+.banner.ok{background:var(--green-bg);border-color:#C4E2C6;color:#1E5B22}
+.banner.info{background:var(--blue-bg);border-color:#C6D9F5;color:var(--blue)}
+
+/* ---------- lists / tables ---------- */
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:middle}
+th{background:#F2F6F9;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.twocol{grid-template-columns:1fr}}
+.chip{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:11px;padding:8px 11px;margin:6px 0;background:#fff}
+.chip .nm{font-weight:600;font-size:14px}
+.steps{margin:8px 0;padding-left:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:8px 10px 8px 40px;border:1px solid var(--line);border-radius:11px;margin:6px 0;background:#fff;font-size:14px}
+.steps li::before{content:counter(s);position:absolute;left:10px;top:8px;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono"}
+.moves li::before{background:var(--amber)}
+.reco{font-size:17px;font-weight:600;line-height:1.45;padding:14px;border-radius:12px;background:var(--green-bg);border:1px solid #C4E2C6;color:#1E5B22;font-family:"Space Grotesk"}
+.reco.none{background:var(--amber-bg);border-color:#EBD9AE;color:#7A5310}
+
+/* ---------- block strip ---------- */
+.strip{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin:10px 0}
+.blk{border-radius:8px;padding:7px 4px;text-align:center;font-size:11px;border:1px solid;line-height:1.25}
+.blk b{display:block;font-family:"IBM Plex Mono";font-size:12px}
+.blk.O{background:var(--green-bg);border-color:#C4E2C6;color:#1E5B22}
+.blk.E{background:var(--amber-bg);border-color:#EBD9AE;color:#7A5310}
+.blk.N{background:var(--grey-bg);border-color:var(--line);color:var(--muted)}
+.blk.A{background:repeating-linear-gradient(45deg,#F3E9F8,#F3E9F8 5px,#fff 5px,#fff 10px);border-color:#DEC7EB;color:var(--purple)}
+.blk.now{outline:2px solid var(--blue);outline-offset:1px}
+
+/* ---------- heatmap ---------- */
+.hm-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.hm-month{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+.hm-month h4{margin:0 0 6px;font-size:13px;color:var(--blue)}
+.hm-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.hm-hd{font-size:10px;color:var(--muted);text-align:center;font-weight:600}
+.hm-d{aspect-ratio:1/1;border-radius:6px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;cursor:pointer;background:#fff;line-height:1.05;padding:1px}
+.hm-d .dn{font-family:"IBM Plex Mono";font-size:9.5px;color:var(--muted)}
+.hm-d .ct{font-family:"IBM Plex Mono";font-weight:600;font-size:12px}
+.hm-d.thin{background:var(--red-bg);border-color:#F2C9C5}.hm-d.thin .ct{color:var(--red)}
+.hm-d.good{background:var(--green-bg);border-color:#C4E2C6}.hm-d.good .ct{color:var(--green)}
+.hm-d.heavy{background:var(--amber-bg);border-color:#EBD9AE}.hm-d.heavy .ct{color:var(--amber)}
+.hm-d.zero{background:var(--grey-bg)}.hm-d.zero .ct{color:var(--muted)}
+.hm-d:hover{outline:2px solid var(--blue)}
+.hm-d.blank{border:none;background:transparent;cursor:default}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin:10px 0;align-items:center}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:5px;vertical-align:-2px;border:1px solid var(--line)}
+
+/* ---------- day grid ---------- */
+.gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+table.daygrid{min-width:760px;font-size:12px}
+table.daygrid th,table.daygrid td{padding:2px 3px;text-align:center}
+table.daygrid th.res{min-width:112px;font-size:11px;text-transform:none;letter-spacing:0;color:var(--ink);background:#F2F6F9}
+table.daygrid th.res .lane{display:block;font-size:10px;color:var(--muted);font-weight:400;font-family:"IBM Plex Mono"}
+td.tcol{width:62px;font-family:"IBM Plex Mono";font-size:11px;color:var(--muted);background:#F7F9FB;text-align:right;padding-right:6px}
+.slot{border-radius:6px;padding:4px 3px;font-size:10.5px;line-height:1.2;cursor:pointer;border:1px solid;min-height:26px;display:flex;flex-direction:column;justify-content:center;font-weight:600}
+.slot small{display:block;font-weight:400;font-size:9.5px;opacity:.85}
+.s-est{background:var(--blue-bg);border-color:#C6D9F5;color:var(--blue)}
+.s-new{background:var(--teal-bg);border-color:#BFE3DC;color:var(--teal)}
+.s-hosp{background:var(--amber-bg);border-color:#EBD9AE;color:var(--amber)}
+.s-frozen{background:#fff;border:2px dashed var(--red);color:var(--red)}
+.s-any{background:var(--purple-bg);border-color:#DEC7EB;color:var(--purple)}
+.s-open{background:#FBFDFE;border-color:var(--line);color:#9AA9B6;font-weight:400}
+.s-hold{background:repeating-linear-gradient(45deg,#EEF2F6,#EEF2F6 4px,#fff 4px,#fff 8px);border-color:var(--line);color:var(--muted)}
+.s-lunch{background:repeating-linear-gradient(45deg,#E7ECF1,#E7ECF1 4px,#F5F8FA 4px,#F5F8FA 8px);border-color:var(--line);color:var(--muted);cursor:default;font-weight:400}
+.s-none{background:#F4F7F9;border-color:transparent;cursor:default}
+.slot.moved{box-shadow:0 0 0 2px var(--red) inset}
+.slot.added{box-shadow:0 0 0 2px var(--green) inset}
+
+/* ---------- rule cards ---------- */
+.rules{margin-top:26px;border:1px solid var(--line);border-radius:var(--r);background:#fff;overflow:hidden}
+.rules>summary{cursor:pointer;padding:14px 16px;font-family:"Space Grotesk";font-weight:600;font-size:16px;background:#F2F6F9;list-style:none}
+.rules>summary::-webkit-details-marker{display:none}
+.rules>summary::before{content:"▸ ";color:var(--blue)}
+.rules[open]>summary::before{content:"▾ "}
+.rulegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:16px}
+.rulecard{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#FBFDFE}
+.rulecard h4{margin:0 0 6px;font-size:14px;color:var(--blue)}
+.rulecard p,.rulecard li{font-size:13px;margin:5px 0;color:#2C3B49}
+.rulecard ul{margin:5px 0;padding-left:18px}
+.kbd{font-family:"IBM Plex Mono";background:#EEF2F6;border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
+.hidden{display:none!important}
+.foot{color:var(--muted);font-size:12px;text-align:center;margin:26px 0 0}
+#selftest{font-family:"IBM Plex Mono";font-size:12px;white-space:pre-wrap}
+
+/* ---------- print: only day grid + move list ---------- */
+@media print{
+  body{background:#fff}
+  header.top,.tabs,.rules,.noprint,.foot{display:none!important}
+  .card{border:none;padding:0;margin:0 0 10px;break-inside:avoid}
+  #printArea{display:block!important}
+  .panel:not(#tab-day):not(#tab-out){display:none!important}
+  table.daygrid{min-width:0;font-size:9px}
+  .slot{min-height:18px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brandrow">
+    <div class="brand">TEMPO <span>Scheduler</span></div>
+    <div class="tagline">Book the resident, not the day. &nbsp;·&nbsp; No patient names ever — counts only.</div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab on" data-tab="who">1 · WHO'S IN CLINIC?<small>Who can I book on this date?</small></button>
+    <button class="tab" data-tab="when">2 · WHEN CAN I BOOK DR. X?<small>Find this doctor's open dates</small></button>
+    <button class="tab" data-tab="year">3 · YEAR AT A GLANCE<small>Busy and quiet days, July→June</small></button>
+    <button class="tab" data-tab="day">4 · BUILD TODAY'S DAY<small>Make the schedule work</small></button>
+    <button class="tab" data-tab="out">5 · SOMEONE CALLED OUT<small>Move the patients safely</small></button>
+    <button class="tab set" data-tab="set">SETTINGS<small>Names, days, targets</small></button>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div id="electiveBanner" class="banner warn noprint">
+    <b>Heads up:</b> elective clinic days are currently a best guess (spread Monday→Friday down the list).
+    Go to <b>Settings</b> and set each resident's real elective clinic day.
+    <button class="btn ghost sm" style="margin-left:8px" onclick="go('set')">Open Settings</button>
+    <button class="btn ghost sm" onclick="dismissBanner()">I've set them</button>
+  </div>
+
+  <!-- ============ TAB 1 ============ -->
+  <section class="panel" id="tab-who">
+    <div class="card noprint">
+      <h2>Who is in clinic on this date?</h2>
+      <p class="sub">Pick a date. The tool reads the residency block schedule and tells you who is available.</p>
+      <div class="row">
+        <div class="field"><label>Date</label><input type="date" id="t1date"></div>
+        <div class="field"><label>Attendings in clinic</label>
+          <div class="stepper"><button onclick="stepAtt('t1att',-1)">−</button><input type="number" id="t1att" value="3" min="1" max="5"><button onclick="stepAtt('t1att',1)">+</button></div>
+        </div>
+        <div class="field"><label>&nbsp;</label><button class="btn ghost" onclick="setToday('t1date');renderWho()">Today</button></div>
+      </div>
+    </div>
+    <div id="whoOut"></div>
+  </section>
+
+  <!-- ============ TAB 2 ============ -->
+  <section class="panel hidden" id="tab-when">
+    <div class="card noprint">
+      <h2>When can I book Dr. X?</h2>
+      <p class="sub">Choose the doctor and roughly how far out the patient needs to come back. The tool finds real clinic dates.</p>
+      <div class="row">
+        <div class="field"><label>Doctor</label><select id="t2res"></select></div>
+        <div class="field"><label>Weeks from now</label><input type="number" id="t2weeks" value="12" min="0" max="52"></div>
+        <div class="field"><label>± weeks</label><input type="number" id="t2tol" value="2" min="0" max="12"></div>
+        <div class="field"><label>Visit type</label><select id="t2type">
+          <option value="EST">Follow-up (established patient)</option>
+          <option value="NEW">New patient</option>
+          <option value="HOSP">Hospital follow-up</option>
+        </select></div>
+        <div class="field"><label>Continuity</label><select id="t2cont">
+          <option value="C1">Must see own doctor</option>
+          <option value="C2" selected>Prefer own team</option>
+          <option value="C3">Any doctor</option>
+        </select></div>
+        <div class="field"><label>Start from</label><input type="date" id="t2from"></div>
+        <div class="field"><label>&nbsp;</label><button class="btn" onclick="renderWhen()">Find dates</button></div>
+      </div>
+    </div>
+    <div id="whenOut"></div>
+  </section>
+
+  <!-- ============ TAB 3 ============ -->
+  <section class="panel hidden" id="tab-year">
+    <div class="card noprint">
+      <h2>Year at a glance</h2>
+      <p class="sub">Every weekday of the academic year, coloured by how many residents are in clinic.
+         Steer big batches of bookings toward the <b>thin</b> days. Hover a day to see the names. Click a day to open it in Tab 1.</p>
+      <div class="legend">
+        <span><i style="background:#FCEAE8;border-color:#F2C9C5"></i>thin — under 4 residents</span>
+        <span><i style="background:#E7F4E8;border-color:#C4E2C6"></i>good — 4 to 9</span>
+        <span><i style="background:#FBF2E0;border-color:#EBD9AE"></i>heavy — 10 or more (check attendings)</span>
+        <span><i style="background:#EEF2F6"></i>nobody in clinic</span>
+      </div>
+    </div>
+    <div id="yearOut"></div>
+  </section>
+
+  <!-- ============ TAB 4 ============ -->
+  <section class="panel hidden" id="tab-day">
+    <div class="card noprint">
+      <h2>Build today's day</h2>
+      <p class="sub">Type in what is already booked and who is waiting. Press the big button and the tool lays the day out
+         and tells you, in plain sentences, exactly what to move.</p>
+      <div class="row">
+        <div class="field"><label>Date</label><input type="date" id="t4date"></div>
+        <div class="field"><label>Attendings in clinic</label>
+          <div class="stepper"><button onclick="stepAtt('t4att',-1)">−</button><input type="number" id="t4att" value="3" min="1" max="5"><button onclick="stepAtt('t4att',1)">+</button></div>
+        </div>
+        <div class="field"><label>&nbsp;</label><button class="btn ghost" onclick="renderDayRoster()">Reload roster for this date</button></div>
+      </div>
+      <div id="dayRoster"></div>
+      <h3>Who is waiting?</h3>
+      <p class="sub">Counts only — never type a patient's name anywhere in this tool.</p>
+      <div class="row">
+        <div class="field"><label>Urgent</label><input type="number" id="qUrgent" value="0" min="0"></div>
+        <div class="field"><label>Hospital discharges</label><input type="number" id="qDisch" value="0" min="0"></div>
+        <div class="field"><label>Routine waitlist</label><input type="number" id="qWait" value="0" min="0"></div>
+        <div class="field"><label>New patients</label><input type="number" id="qNew" value="0" min="0"></div>
+      </div>
+      <br>
+      <button class="btn big" onclick="runBuildDay()">BUILD THE DAY</button>
+    </div>
+    <div id="dayOut"></div>
+  </section>
+
+  <!-- ============ TAB 5 ============ -->
+  <section class="panel hidden" id="tab-out">
+    <div class="card noprint">
+      <h2>Someone called out</h2>
+      <p class="sub">Pick who is missing. The tool shows exactly where each patient goes, in order, and re-draws the day.
+         Build the day in Tab 4 first so the tool knows what was booked.</p>
+      <div class="row">
+        <div class="field"><label>Who is out?</label><select id="t5who"></select></div>
+        <div class="field"><label>&nbsp;</label><button class="btn warn" onclick="runCallOut()">Show me the plan</button></div>
+      </div>
+    </div>
+    <div id="outOut"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="panel hidden" id="tab-set">
+    <div class="card">
+      <h2>Settings</h2>
+      <p class="sub">Everything here is saved in this browser only. No patient information is ever stored.</p>
+      <div class="row">
+        <button class="btn" onclick="saveSettings(true)">Save settings</button>
+        <button class="btn ghost" onclick="exportJSON()">Export settings (JSON)</button>
+        <button class="btn ghost" onclick="document.getElementById('importBox').classList.toggle('hidden')">Import settings</button>
+        <button class="btn warn" onclick="resetSettings()">Reset settings to defaults</button>
+      </div>
+      <div id="importBox" class="hidden" style="margin-top:12px">
+        <label class="rule">Paste an exported settings file here, then press Load.</label>
+        <textarea id="importTA" placeholder='{"residents":{...}}'></textarea>
+        <button class="btn sm" onclick="importJSON()">Load</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Numbers</h3>
+      <div class="row">
+        <div class="field"><label>PGY-2 target Mon–Wed</label><input type="number" id="sT2mw" min="1"></div>
+        <div class="field"><label>PGY-2 target Thu</label><input type="number" id="sT2th" min="1"></div>
+        <div class="field"><label>PGY-2 target Fri</label><input type="number" id="sT2fr" min="1"></div>
+        <div class="field"><label>PGY-1 target Mon–Wed</label><input type="number" id="sT1mw" min="1"></div>
+        <div class="field"><label>PGY-1 target Thu</label><input type="number" id="sT1th" min="1"></div>
+        <div class="field"><label>PGY-1 target Fri</label><input type="number" id="sT1fr" min="1"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>Pre-book ceiling %</label><input type="number" id="sCeil" min="10" max="100"></div>
+        <div class="field"><label>Precepts per attending</label><input type="number" id="sPrec" min="1"></div>
+        <div class="field"><label>Precepts per attending (Thu AM)</label><input type="number" id="sPrecTh" min="1"></div>
+        <div class="field"><label>Default attendings</label><input type="number" id="sAtt" min="1" max="5"></div>
+        <div class="field"><label style="text-transform:none">Away rotations (BUMCP / Mayo / Gateway / NIH)</label>
+          <select id="sAway">
+            <option value="1">Treat like an elective — one clinic day a week (confirm each time)</option>
+            <option value="0">Treat like inpatient — no clinic at all</option>
+          </select></div>
+      </div>
+      <p class="rule" style="margin-top:8px">Pre-book ceiling = target × ceiling %, rounded down. Supervision cap = attendings × precepts.</p>
+    </div>
+
+    <div class="card">
+      <h3>Roster and block schedule</h3>
+      <p class="sub">Block codes, left to right, are Block 1 → Block 12.
+        <span class="kbd">O</span> outpatient (clinic all week) ·
+        <span class="kbd">N</span> inpatient / nights / ICU (no clinic) ·
+        <span class="kbd">E</span> everything else (one clinic day a week) ·
+        <span class="kbd">A</span> away rotation (confirm)</p>
+      <div class="scroll"><table id="setRoster"></table></div>
+    </div>
+
+    <div class="card">
+      <h3>Clinic templates</h3>
+      <p class="sub">One line per slot: <span class="kbd">8:00 Est</span>. Classes: Est, New, FROZEN, HospFU, Any.
+         Lunch 12:00–1:00 is never bookable and is never listed here.</p>
+      <div id="setTemplates" class="twocol"></div>
+      <button class="btn sm" style="margin-top:10px" onclick="saveTemplates()">Save templates</button>
+    </div>
+  </section>
+
+  <!-- ============ RULE CARDS (every tab) ============ -->
+  <details class="rules noprint" id="ruleCards">
+    <summary>Rule cards — how this tool decides (plain English)</summary>
+    <div class="rulegrid">
+      <div class="rulecard"><h4>Who is in clinic</h4>
+        <p>Every resident has one rotation per block. The letter tells you the clinic pattern:</p>
+        <ul>
+          <li><b>O</b> — outpatient block. In clinic <b>every weekday</b> of that block.</li>
+          <li><b>N</b> — inpatient, night float or ICU. <b>No clinic at all</b> that block.</li>
+          <li><b>E</b> — anything else (elective, SNF, ED Obs, community). <b>One fixed weekday</b> each week — set it in Settings.</li>
+          <li><b>A</b> — away rotation. Treated like E, but shown as <b>"away — confirm"</b>. Always ring to confirm.</li>
+        </ul>
+        <p>A resident on their elective day gets the <b>full</b> template for that weekday, exactly like an outpatient resident.</p></div>
+
+      <div class="rulecard"><h4>Slot classes</h4>
+        <ul>
+          <li><b>Est</b> (blue) — follow-ups. Bookable any time.</li>
+          <li><b>New</b> (teal) — new patients only until 14 days before the date; after that it becomes an Est slot.</li>
+          <li><b>FROZEN</b> (red outline) — hidden until 2 days before. Then released for urgent, hospital discharge or waitlist only.</li>
+          <li><b>HospFU</b> (amber) — hospital follow-up only, within 14 days of discharge.</li>
+          <li><b>Any</b> (purple) — PGY-1 slots. Anything, always 60 minutes.</li>
+        </ul></div>
+
+      <div class="rulecard"><h4>The numbers</h4>
+        <ul>
+          <li><b>Target</b> per resident per day: PGY-2 12 / 6 (Thu) / 10 (Fri) · PGY-1 5 / 3 / 4.</li>
+          <li><b>Pre-book ceiling</b> = 70% of target, rounded down. Advance bookings may never go above it. The held-back 30% is Frozen, hospital follow-ups and flex.</li>
+          <li><b>Supervision cap</b> = attendings × 32 (× 16 on Thursday, morning only).</li>
+          <li><b>Day total</b> = the smaller of (all targets added up) and (supervision cap).</li>
+          <li><b>Hard maximum</b> per resident = the number of slots in the template. Never go above it. Never shorten a slot.</li>
+        </ul></div>
+
+      <div class="rulecard"><h4>Continuity levels</h4>
+        <ul>
+          <li><b>Must see own doctor</b> — never moved to anybody else.</li>
+          <li><b>Prefer own team</b> — may move to the firm partner only.</li>
+          <li><b>Any doctor</b> — may move freely.</li>
+        </ul>
+        <p>A <b>firm</b> is one PGY-2 and one PGY-1 paired together, sitting in one attending's lane.</p></div>
+
+      <div class="rulecard"><h4>When somebody calls out</h4>
+        <ul>
+          <li><b>Must see own doctor</b> → the firm partner takes them, up to 2 over target. Anyone left goes to that doctor's next clinic date.</li>
+          <li><b>Prefer own team</b> → firm partner first, then anyone else in the same lane.</li>
+          <li><b>Any doctor</b> → any open slot today.</li>
+          <li>Whoever is left goes on the <b>nurse reschedule list</b>.</li>
+        </ul></div>
+
+      <div class="rulecard"><h4>Edge cases worth knowing</h4>
+        <ul>
+          <li><b>Thursday</b> is morning only — 8 slots for PGY-2, 4 for PGY-1, and the supervision cap halves.</li>
+          <li><b>Friday</b> starts at 9:00 — no 8:00 or 8:30.</li>
+          <li>A <b>new patient no-show</b> means the slot becomes an Est slot; fill it from the follow-up waitlist.</li>
+          <li>A <b>graduating resident</b> hands their panel to a named successor — change the roster in Settings at the end of June.</li>
+          <li>An <b>away rotation</b> always needs a phone call to confirm before you book.</li>
+          <li>Dates outside 1 July 2026 – 30 June 2027 are outside this year's block schedule.</li>
+        </ul></div>
+    </div>
+  </details>
+
+  <p class="foot">TEMPO Scheduler · academic year 2026–27 · settings saved in this browser only · no patient information is stored.</p>
+  <div id="selftest" class="hidden"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================================
+   TEMPO Scheduler — all logic. Plain vanilla JS, no libraries.
+   Sections:  DATA · SETTINGS · DATE+BLOCK · AVAILABILITY · TEMPLATE ·
+              CAPACITY · ADVICE · BUILD DAY · CALL OUT · RENDERERS · SELF-TEST
+   ========================================================================== */
+
+/* ------------------------------ DATA ------------------------------------- */
+
+/* Academic year 2026-27 block dates (hard-coded). */
+const BLOCKS = [
+  {n:1,  s:'2026-07-01', e:'2026-07-28'},
+  {n:2,  s:'2026-07-29', e:'2026-08-25'},
+  {n:3,  s:'2026-08-26', e:'2026-09-29'},
+  {n:4,  s:'2026-09-30', e:'2026-11-03'},
+  {n:5,  s:'2026-11-04', e:'2026-12-01'},
+  {n:6,  s:'2026-12-02', e:'2026-12-29'},
+  {n:7,  s:'2026-12-30', e:'2027-01-26'},
+  {n:8,  s:'2027-01-27', e:'2027-02-23'},
+  {n:9,  s:'2027-02-24', e:'2027-03-23'},
+  {n:10, s:'2027-03-24', e:'2027-04-27'},
+  {n:11, s:'2027-04-28', e:'2027-06-01'},
+  {n:12, s:'2027-06-02', e:'2027-06-30'}
+];
+const YEAR_START = '2026-07-01', YEAR_END = '2027-06-30';
+
+/* Roster. Code string index 0 = Block 1 ... index 11 = Block 12. */
+const ROSTER_PGY1 = [
+  ['Alejandra Arias Castro','NENENONENENE'],
+  ['Giselle Arias Ortiz','NENONENENENE'],
+  ['Xavier Aviles Hernandez','NENENENENENO'],
+  ['Mariela Cuebas Fantauzzi','NENENEOENNNE'],
+  ['Bharath Duraisamy Swami Kannan','EENNNENENEON'],
+  ['Alberto Gonzalez','NENENENENONE'],
+  ['Syed Mesum Hussain','EEENENONENNN'],
+  ['Musab Khan','ENENENNNENOE'],
+  ['Michael Mariano Nabong','NENENONENENE'],
+  ['Kartikeya Ojah','ONENENENENEN'],
+  ['Sainamitha Palnati','NENOEENNNENE'],
+  ['Aman Patel','ENENONENENEN'],
+  ['Nixat Patel','NNEEENENONEN'],
+  ['Adriel Rodriguez Rodriguez','ENENENENONEN'],
+  ['Gaston Rodriguez','ENONENENENEN'],
+  ['Danniel Sanchez','NNNENENONEEE'],
+  ['Armanveer Singh','EONENNNENENE'],
+  ['Savad Torres','ENONENENENEN'],
+  ['Jordon Walker','ENEEENENONNN'],
+  ['Mark Wyant','ENENENONENEN']
+];
+const ROSTER_PGY2 = [
+  ['Emily Angeles Mancinas','NEONEENEOANN'],
+  ['Prijesh Avaiya','OEEAONNNNENE'],
+  ['Paul Avila Calderon','EONNENNOEENE'],
+  ['Alessi Azores','NENNOENENEEO'],
+  ['Vikrant Badhwar','EONNENOENNEE'],
+  ['Omar Baghdadi','EENENOEENNNO'],
+  ['Mariflor Delgado Rahim','NEEONEENNENO'],
+  ['Arjun Dhir','ONEENEAONENN'],
+  ['Ernesto Iniguez Jr','ENENNONNOAEE'],
+  ['Rudrani Kotha','ENOENEENENON'],
+  ['Urja Mehta','NENEEONENONE'],
+  ['Luis Mendez','ENENOENANOEN'],
+  ['Lakshiya Ramamoorthy','NNEEAOEENNON'],
+  ['Avyay Reddy','EENONENNEONA'],
+  ['Jorge Reynoso Figueroa','ENOEENONANEN'],
+  ['Angelo Soukovelos','NEEENNONENOA'],
+  ['Swati','EONEENENONAN'],
+  ['Jessee Tanasiuk','OEENENENONEN'],
+  ['Poonam Tawde','ENONNAAOENEN'],
+  ['Lakshmi Vallabhaneni','NENONNEEEONE']
+];
+
+const WD_NAME  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const WD_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const LANE_LETTERS = ['A','B','C','D','E'];
+
+/* Clinic templates. m = minutes from midnight. Lunch 720-780 is never listed. */
+function tpl(m,min,cls){ return {m:m,min:min,cls:cls}; }
+const P2_MWF_AM = [tpl(480,30,'Est'),tpl(510,30,'Est'),tpl(540,30,'New'),tpl(570,30,'Est'),
+                   tpl(600,30,'FROZEN'),tpl(630,30,'Est'),tpl(660,30,'New'),tpl(690,30,'Est')];
+const P2_PM     = [tpl(780,30,'HospFU'),tpl(810,30,'Est'),tpl(840,30,'New'),tpl(870,30,'Est'),
+                   tpl(900,30,'FROZEN'),tpl(930,30,'Est'),tpl(960,30,'New'),tpl(990,30,'Est')];
+const DEFAULT_TEMPLATES = {
+  'PGY-2': {
+    1: P2_MWF_AM.concat(P2_PM),                 /* Monday    16 */
+    2: P2_MWF_AM.concat(P2_PM),                 /* Tuesday   16 */
+    3: P2_MWF_AM.concat(P2_PM),                 /* Wednesday 16 */
+    4: P2_MWF_AM.slice(),                       /* Thursday   8  AM only */
+    5: P2_MWF_AM.slice(2).concat(P2_PM)         /* Friday    14  starts 9:00 */
+  },
+  'PGY-1': {
+    1: [480,540,600,660,780,840,900,960].map(function(m){return tpl(m,60,'Any');}),  /* 8 */
+    2: [480,540,600,660,780,840,900,960].map(function(m){return tpl(m,60,'Any');}),
+    3: [480,540,600,660,780,840,900,960].map(function(m){return tpl(m,60,'Any');}),
+    4: [480,540,600,660].map(function(m){return tpl(m,60,'Any');}),                  /* 4 Thu AM */
+    5: [540,600,660,780,840,900,960].map(function(m){return tpl(m,60,'Any');})       /* 7 Fri 9:00 */
+  }
+};
+
+/* ---------------------------- SETTINGS ----------------------------------- */
+
+const LS_KEY = 'tempo.scheduler.settings.v1';
+
+function defaultSettings(){
+  var res = {}, order = [];
+  function add(list, level){
+    list.forEach(function(r,i){
+      /* default elective weekday: round-robin Mon..Fri within each PGY level, in roster order */
+      var lvlIndex = i;
+      res[r[0]] = {
+        name: r[0], level: level, codes: r[1], active: true,
+        electiveDay: 1 + (lvlIndex % 5),
+        partner: '', lane: 'Lane ' + LANE_LETTERS[i % LANE_LETTERS.length]
+      };
+      order.push(r[0]);
+    });
+  }
+  add(ROSTER_PGY2, 'PGY-2');
+  add(ROSTER_PGY1, 'PGY-1');
+  /* default firm pairing: by roster order, PGY-2[i] with PGY-1[i] */
+  var n = Math.min(ROSTER_PGY2.length, ROSTER_PGY1.length);
+  for (var i=0;i<n;i++){
+    var a = ROSTER_PGY2[i][0], b = ROSTER_PGY1[i][0];
+    res[a].partner = b; res[b].partner = a;
+    res[b].lane = res[a].lane;                       /* a firm shares one attending lane */
+  }
+  return {
+    residents: res, order: order,
+    targets: {'PGY-2':{mw:12,th:6,fr:10}, 'PGY-1':{mw:5,th:3,fr:4}},
+    ceilingPct: 70, precepts: 32, preceptsThu: 16, attendings: 3,
+    awayAsElective: true, bannerDismissed: false,
+    templates: JSON.parse(JSON.stringify(DEFAULT_TEMPLATES))
+  };
+}
+
+var S = defaultSettings();
+
+function loadSettings(){
+  try{
+    var raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    var saved = JSON.parse(raw);
+    var d = defaultSettings();
+    /* merge shallowly so a new app version never wipes a scheduler's work */
+    S = {
+      residents: Object.assign(d.residents, saved.residents || {}),
+      order: saved.order && saved.order.length ? saved.order : d.order,
+      targets: Object.assign(d.targets, saved.targets || {}),
+      ceilingPct: saved.ceilingPct != null ? saved.ceilingPct : d.ceilingPct,
+      precepts: saved.precepts != null ? saved.precepts : d.precepts,
+      preceptsThu: saved.preceptsThu != null ? saved.preceptsThu : d.preceptsThu,
+      attendings: saved.attendings != null ? saved.attendings : d.attendings,
+      awayAsElective: saved.awayAsElective != null ? saved.awayAsElective : d.awayAsElective,
+      bannerDismissed: !!saved.bannerDismissed,
+      templates: saved.templates || d.templates
+    };
+  }catch(e){ console.warn('Could not read saved settings — using defaults.', e); }
+}
+function persist(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+  catch(e){ console.warn('Could not save settings.', e); }
+}
+function resetSettings(){
+  if(!confirm('Reset every setting back to the built-in defaults? Nothing about patients is stored, so nothing else is lost.')) return;
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+  S = defaultSettings(); persist(); location.reload();
+}
+
+/* Convenience accessors */
+function R(name){ return S.residents[name]; }
+function allResidents(){ return S.order.map(R).filter(Boolean); }
+function activeResidents(){ return allResidents().filter(function(r){ return r.active; }); }
+function levelOf(name){ var r=R(name); return r ? r.level : 'PGY-2'; }
+
+/* ------------------------- DATE + BLOCK HELPERS -------------------------- */
+
+function parseISO(iso){ var p = String(iso).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function toISO(d){
+  var m = d.getMonth()+1, day = d.getDate();
+  return d.getFullYear() + '-' + (m<10?'0':'') + m + '-' + (day<10?'0':'') + day;
+}
+function addDays(iso, n){ var d = parseISO(iso); d.setDate(d.getDate()+n); return toISO(d); }
+function weekdayOf(iso){ return parseISO(iso).getDay(); }           /* 0 Sun .. 6 Sat */
+function isWeekday(iso){ var w = weekdayOf(iso); return w>=1 && w<=5; }
+function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
+function prettyDate(iso){
+  var d = parseISO(iso);
+  return WD_SHORT[d.getDay()] + ' ' + (d.getMonth()+1) + '/' + d.getDate();
+}
+function longDate(iso){
+  var d = parseISO(iso);
+  return WD_NAME[d.getDay()] + ', ' + ['January','February','March','April','May','June','July',
+    'August','September','October','November','December'][d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+function minToTime(m){
+  var h = Math.floor(m/60), mm = m%60, ap = h>=12 ? 'PM':'AM', hh = h%12; if(hh===0) hh=12;
+  return hh + ':' + (mm<10?'0':'') + mm + ' ' + ap;
+}
+function minToShort(m){
+  var h = Math.floor(m/60), mm = m%60, hh = h%12; if(hh===0) hh=12;
+  return hh + ':' + (mm<10?'0':'') + mm;
+}
+
+/* blockForDate — which residency block does this date fall in?
+   Returns {n, s, e, label, dates} or null when the date is outside the year. */
+function blockForDate(iso){
+  if(!iso) return null;
+  for (var i=0;i<BLOCKS.length;i++){
+    var b = BLOCKS[i];
+    if (iso >= b.s && iso <= b.e){
+      return {n:b.n, s:b.s, e:b.e, label:'B'+b.n, dates: prettyDate(b.s)+' – '+prettyDate(b.e)};
+    }
+  }
+  return null;
+}
+function outsideYearMessage(iso){
+  return 'That date (' + (iso||'—') + ') is outside the 2026–27 academic year. ' +
+         'This tool covers July 1, 2026 through June 30, 2027. Pick a date inside that range.';
+}
+
+/* --------------------------- AVAILABILITY -------------------------------- */
+/* The heart of the tool.  FULL = in clinic every weekday of the block.
+   ELECTIVE_DAY = in clinic on their one fixed weekday.  NONE = not in clinic. */
+
+function codeFor(name, iso){
+  var r = R(name), b = blockForDate(iso);
+  if(!r || !b) return null;
+  return (r.codes || '').charAt(b.n - 1) || 'N';
+}
+
+function availabilityFor(resident, date){
+  return availabilityDetail(resident, date).status;
+}
+
+function availabilityDetail(resident, date){
+  var name = (typeof resident === 'string') ? resident : (resident && resident.name);
+  var r = R(name);
+  var out = {status:'NONE', code:null, block:null, away:false, why:'', electiveDay:null};
+  if(!r){ out.why = 'Not on the roster.'; return out; }
+  var b = blockForDate(date);
+  if(!b){ out.why = outsideYearMessage(date); return out; }
+  out.block = b;
+  if(!r.active){ out.why = name + ' is marked inactive in Settings.'; return out; }
+  if(!isWeekday(date)){ out.why = 'Clinic runs Monday to Friday only.'; return out; }
+  var code = (r.codes || '').charAt(b.n - 1) || 'N';
+  out.code = code;
+  out.electiveDay = r.electiveDay;
+  var w = weekdayOf(date);
+
+  if(code === 'O'){ out.status = 'FULL'; out.why = 'Outpatient block — in clinic every weekday of ' + b.label + '.'; return out; }
+  if(code === 'N'){ out.status = 'NONE'; out.why = 'Inpatient / nights / ICU in ' + b.label + ' — no clinic at all.'; return out; }
+  if(code === 'A'){
+    out.away = true;
+    if(!S.awayAsElective){ out.status = 'NONE'; out.why = 'Away rotation in ' + b.label + ' — set to "no clinic" in Settings.'; return out; }
+    out.status = (w === r.electiveDay) ? 'ELECTIVE_DAY' : 'NONE';
+    out.why = 'Away rotation in ' + b.label + ' — treated as one clinic day a week (' + WD_NAME[r.electiveDay] + '). Please confirm.';
+    return out;
+  }
+  /* code E, or anything unrecognised, behaves as "one clinic day a week" */
+  out.status = (w === r.electiveDay) ? 'ELECTIVE_DAY' : 'NONE';
+  out.why = (out.status === 'ELECTIVE_DAY')
+    ? 'Elective-type block ' + b.label + ' — clinic on ' + WD_NAME[r.electiveDay] + '.'
+    : 'Elective-type block ' + b.label + ' — clinic only on ' + WD_NAME[r.electiveDay] + '.';
+  return out;
+}
+
+/* residentsOnDate — everybody with FULL, or E/A whose weekday matches. */
+function residentsOnDate(date){
+  var out = [];
+  activeResidents().forEach(function(r){
+    var d = availabilityDetail(r.name, date);
+    if(d.status === 'FULL' || d.status === 'ELECTIVE_DAY'){
+      out.push({name:r.name, level:r.level, status:d.status, away:d.away, code:d.code,
+                electiveDay:r.electiveDay, partner:r.partner, lane:r.lane});
+    }
+  });
+  return out;
+}
+
+/* nextClinicDates — the resident's next real clinic dates on or after `from`. */
+function nextClinicDates(resident, from, howMany, skipToday){
+  var name = (typeof resident === 'string') ? resident : (resident && resident.name);
+  var want = howMany || 3, out = [], iso = skipToday ? addDays(from,1) : from, guard = 0;
+  while(out.length < want && guard < 420){
+    if(iso > YEAR_END) break;
+    if(iso >= YEAR_START && isWeekday(iso)){
+      var st = availabilityFor(name, iso);
+      if(st === 'FULL' || st === 'ELECTIVE_DAY') out.push(iso);
+    }
+    iso = addDays(iso,1); guard++;
+  }
+  return out;
+}
+/* the resident's most recent clinic date on or before `from` */
+function prevClinicDates(resident, from, howMany){
+  var name = (typeof resident === 'string') ? resident : (resident && resident.name);
+  var want = howMany || 2, out = [], iso = from, guard = 0;
+  while(out.length < want && guard < 420){
+    if(iso < YEAR_START) break;
+    if(iso <= YEAR_END && isWeekday(iso)){
+      var st = availabilityFor(name, iso);
+      if(st === 'FULL' || st === 'ELECTIVE_DAY') out.push(iso);
+    }
+    iso = addDays(iso,-1); guard++;
+  }
+  return out;
+}
+
+/* ---------------------- TEMPLATE + TARGETS ------------------------------- */
+
+function templateFor(level, weekday){
+  var t = S.templates[level] && S.templates[level][weekday];
+  return t ? t.slice() : [];
+}
+function templateCount(level, weekday){ return templateFor(level, weekday).length; }
+
+function targetFor(level, weekday){
+  var t = S.targets[level] || S.targets['PGY-2'];
+  if(weekday === 4) return t.th;
+  if(weekday === 5) return t.fr;
+  return t.mw;
+}
+function ceilingFor(level, weekday){
+  return Math.floor(targetFor(level, weekday) * (S.ceilingPct/100));
+}
+function preceptsFor(weekday){ return weekday === 4 ? S.preceptsThu : S.precepts; }
+
+/* Doctor's short name, the way a scheduler says it out loud. */
+function drName(name){
+  var parts = String(name).trim().split(/\s+/).filter(function(p){
+    return !/^(jr|sr|ii|iii|iv)\.?$/i.test(p);
+  });
+  if(parts.length <= 1) return 'Dr. ' + parts[0];
+  if(parts.length === 2) return 'Dr. ' + parts[1];
+  return 'Dr. ' + parts.slice(-2).join(' ');
+}
+
+/* Is this slot usable for this visit type, this many days ahead? */
+function slotUsable(cls, daysOut, visitType){
+  if(cls === 'Any')    return true;                                   /* PGY-1: anything */
+  if(cls === 'Est')    return visitType === 'EST';
+  if(cls === 'New')    return visitType === 'NEW' ? daysOut >= 14 : (visitType === 'EST' && daysOut < 14);
+  if(cls === 'FROZEN') return daysOut <= 2 && (visitType === 'HOSP' || visitType === 'EST');
+  if(cls === 'HospFU') return visitType === 'HOSP';
+  return false;
+}
+function usableSlotCount(level, weekday, daysOut, visitType){
+  return templateFor(level, weekday).filter(function(s){ return slotUsable(s.cls, daysOut, visitType); }).length;
+}
+
+/* ----------------------------- CAPACITY ---------------------------------- */
+
+function computeCapacity(date, attendings, presentList){
+  var w = weekdayOf(date);
+  var present = presentList || residentsOnDate(date);
+  var att = attendings || S.attendings;
+  var slots = 0, targetTotal = 0, ceilingTotal = 0, p1 = 0, p2 = 0;
+  present.forEach(function(r){
+    slots        += templateCount(r.level, w);
+    targetTotal  += targetFor(r.level, w);
+    ceilingTotal += ceilingFor(r.level, w);
+    if(r.level === 'PGY-1') p1++; else p2++;
+  });
+  var per = preceptsFor(w);
+  var cap = att * per;
+  return {
+    date: date, weekday: w, thursday: (w === 4), attendings: att, perAttending: per,
+    residents: present.length, pgy1: p1, pgy2: p2,
+    slots: slots, targetTotal: targetTotal, cap: cap,
+    bookable: Math.min(targetTotal, cap), ceilingTotal: ceilingTotal,
+    thin: present.length > 0 && present.length < 4,
+    overSupervision: targetTotal > cap,
+    rules: {
+      cap: 'cap = ' + att + ' attending' + (att===1?'':'s') + ' × ' + per + (w===4?' (Thursday AM)':''),
+      bookable: 'the smaller of ' + targetTotal + ' (targets) and ' + cap + ' (supervision)',
+      ceiling: S.ceilingPct + '% of each target, rounded down'
+    }
+  };
+}
+
+/* ----------------------------- ADVICE ------------------------------------ */
+/* adviseBooking — Tab 2. Always returns something useful, never "no result". */
+
+function adviseBooking(opts){
+  var name       = opts.resident;
+  var from       = opts.from || todayISO();
+  var weeks      = opts.weeks == null ? 12 : opts.weeks;
+  var tol        = opts.tol   == null ? 2  : opts.tol;
+  var visitType  = opts.visitType || 'EST';
+  var cont       = opts.continuity || 'C2';
+  var attendings = opts.attendings || S.attendings;
+  var booked     = opts.booked || {};                     /* {iso: already booked count} */
+
+  var centre = addDays(from, weeks*7);
+  var winStart = addDays(centre, -tol*7);
+  var winEnd   = addDays(centre,  tol*7);
+  if(winStart < from) winStart = from;
+
+  var r = R(name) || {level:'PGY-2', partner:''};
+  var out = {
+    resident: name, level: r.level, windowStart: winStart, windowEnd: winEnd,
+    dates: [], nearestBefore: [], nearestAfter: [], recommendation: '', ruleNote: '',
+    partnerSuggestion: null, outsideYear: false, strip: blockStrip(name, from)
+  };
+
+  if(winStart > YEAR_END || winEnd < YEAR_START){
+    out.outsideYear = true;
+    out.recommendation = 'That window falls outside the 2026–27 academic year (July 1, 2026 – June 30, 2027). Pick a nearer date.';
+    out.ruleNote = 'This tool only knows the block schedule for the current academic year.';
+    return out;
+  }
+
+  /* every real clinic date inside the window */
+  var iso = winStart, guard = 0;
+  while(iso <= winEnd && guard < 500){
+    if(iso >= YEAR_START && iso <= YEAR_END && isWeekday(iso)){
+      var st = availabilityFor(name, iso);
+      if(st === 'FULL' || st === 'ELECTIVE_DAY') out.dates.push(describeDate(name, iso, st, visitType, attendings, booked, from));
+    }
+    iso = addDays(iso,1); guard++;
+  }
+
+  /* nothing in the window → nearest clinic dates either side, never a dead end */
+  if(out.dates.length === 0){
+    var before = prevClinicDates(name, addDays(winStart,-1), 2);
+    var after  = nextClinicDates(name, addDays(winEnd,1), 2);
+    out.nearestBefore = before.map(function(d){ return describeDate(name,d,availabilityFor(name,d),visitType,attendings,booked,from); });
+    out.nearestAfter  = after .map(function(d){ return describeDate(name,d,availabilityFor(name,d),visitType,attendings,booked,from); });
+
+    var blockNote = awayOrOffNote(name, winStart, winEnd);
+    var choices = [];
+    if(before[0]) choices.push(prettyDate(before[0]));
+    if(after[0])  choices.push(prettyDate(after[0]));
+    var line = drName(name) + ' has no clinic in that window' + (blockNote ? ' — ' + blockNote : '') + '. ';
+    if(choices.length) line += 'Nearest dates are ' + choices.join(' or ') + '. ';
+    else line += 'There is no other clinic date for them inside this academic year. ';
+
+    if(cont === 'C1'){
+      line += '"Must see own doctor" → book one of those dates.';
+    } else if(cont === 'C2' && r.partner){
+      var pd = nextClinicDates(r.partner, winStart, 1);
+      if(pd.length){
+        out.partnerSuggestion = {name:r.partner, date:pd[0]};
+        line += '"Prefer own team" → firm partner ' + drName(r.partner) + ' has ' + prettyDate(pd[0]) + ' open.';
+      } else {
+        line += '"Prefer own team" → firm partner ' + drName(r.partner) + ' has no clinic in that window either; use one of the dates above.';
+      }
+    } else if(cont === 'C3'){
+      var anyDate = firstThinDate(winStart, winEnd, attendings);
+      if(anyDate) line += '"Any doctor" → ' + prettyDate(anyDate.date) + ' is a quiet day with ' + anyDate.count + ' residents in clinic.';
+      else line += '"Any doctor" → use any day in the window; several residents are in clinic.';
+    }
+    out.recommendation = line.trim();
+    out.ruleNote = ruleNoteFor(visitType, from, winStart);
+    return out;
+  }
+
+  /* pick the best date: most ceiling head-room, then earliest */
+  var best = out.dates.slice().sort(function(a,b){
+    if(b.ceilingLeft !== a.ceilingLeft) return b.ceilingLeft - a.ceilingLeft;
+    return a.date < b.date ? -1 : 1;
+  })[0];
+  var tag = best.status === 'ELECTIVE_DAY' ? ' (elective day)' : '';
+  var away = best.away ? ' — away rotation, please confirm first' : '';
+  out.best = best;
+  out.recommendation = 'Book ' + drName(name) + ' on ' + prettyDate(best.date) + tag +
+      ' — ' + best.bookedAlready + ' of ' + best.ceiling + ' ceiling used' + away + '.';
+  out.ruleNote = ruleNoteFor(visitType, from, best.date);
+  return out;
+}
+
+function describeDate(name, iso, status, visitType, attendings, booked, from){
+  var r = R(name) || {level:'PGY-2'};
+  var w = weekdayOf(iso);
+  var present = residentsOnDate(iso);
+  var capInfo = computeCapacity(iso, attendings, present);
+  var ceiling = ceilingFor(r.level, w);
+  var already = +(booked[iso] || 0);
+  var det = availabilityDetail(name, iso);
+  var daysOut = daysBetween(from, iso);
+  return {
+    date: iso, status: status, away: det.away, weekday: w, weekdayName: WD_NAME[w],
+    residents: present.length, cap: capInfo.cap, targetTotal: capInfo.targetTotal,
+    supervision: capInfo.overSupervision ? 'over supervision cap' : (capInfo.thin ? 'thin day' : 'comfortable'),
+    ceiling: ceiling, bookedAlready: already, ceilingLeft: Math.max(0, ceiling - already),
+    slots: templateCount(r.level, w),
+    usable: usableSlotCount(r.level, w, daysOut, visitType),
+    daysOut: daysOut,
+    thursdayAM: w === 4
+  };
+}
+
+function awayOrOffNote(name, a, b){
+  /* name the rotation stretch that blocks the window, in scheduler language */
+  var seen = {}, notes = [];
+  var iso = a, guard = 0;
+  while(iso <= b && guard < 500){
+    var blk = blockForDate(iso);
+    if(blk && !seen[blk.n]){
+      seen[blk.n] = true;
+      var c = codeFor(name, iso);
+      if(c === 'N') notes.push('on Inpatient ' + prettyDate(blk.s) + '–' + prettyDate(blk.e));
+      else if(c === 'A') notes.push('on an away rotation ' + prettyDate(blk.s) + '–' + prettyDate(blk.e));
+      else if(c === 'E'){
+        var r = R(name);
+        notes.push('only in clinic on ' + WD_NAME[r ? r.electiveDay : 1] + 's during ' + blk.label);
+      }
+    }
+    iso = addDays(iso, 7); guard++;
+  }
+  return notes.slice(0,2).join(' and ');
+}
+
+function firstThinDate(a, b, attendings){
+  var iso = a, guard = 0, best = null;
+  while(iso <= b && guard < 500){
+    if(isWeekday(iso) && iso >= YEAR_START && iso <= YEAR_END){
+      var n = residentsOnDate(iso).length;
+      if(n > 0 && (!best || n < best.count)) best = {date: iso, count: n};
+    }
+    iso = addDays(iso,1); guard++;
+  }
+  return best;
+}
+
+function ruleNoteFor(visitType, from, date){
+  var d = date ? daysBetween(from, date) : 999;
+  if(visitType === 'NEW'){
+    return d >= 14
+      ? 'New-patient slots stay reserved for new patients until 14 days before the date. This date is ' + d + ' days out, so a New slot is available.'
+      : 'This date is only ' + d + ' days away, so the New slots have already turned into follow-up (Est) slots. Book this new patient further out, or use a released Frozen slot if it is urgent.';
+  }
+  if(visitType === 'HOSP'){
+    return 'Hospital follow-ups go in the 1:00 HospFU slot and must be within 14 days of discharge. If none is free, a Frozen slot opens 2 days before the date.';
+  }
+  return 'Follow-up (Est) slots are bookable any time. Frozen slots stay hidden until 2 days before the date, then open for urgent, hospital-discharge or waitlist patients only.';
+}
+
+/* the 12-block colour strip for one resident */
+function blockStrip(name, today){
+  var r = R(name); if(!r) return [];
+  var nowBlk = blockForDate(today || todayISO());
+  return BLOCKS.map(function(b, i){
+    var c = (r.codes || '').charAt(i) || 'N';
+    var label = c === 'O' ? 'full clinic'
+              : c === 'N' ? 'no clinic'
+              : c === 'A' ? 'away — confirm'
+              : WD_SHORT[r.electiveDay] + ' only';
+    return {n:b.n, code:c, label:label, dates: prettyDate(b.s)+'–'+prettyDate(b.e),
+            current: !!(nowBlk && nowBlk.n === b.n)};
+  });
+}
+
+/* ---------------------------- BUILD THE DAY ------------------------------ */
+
+function mkPerson(r, w){
+  var est = +r.est||0, nw = +r.nw||0, hosp = +r.hosp||0;
+  var total = est + nw + hosp;
+  var must = Math.min(+r.must||0, total);
+  var prefer = Math.min(+r.prefer||0, total - must);
+  return {
+    name:r.name, level:r.level, lane:r.lane||'', partner:r.partner||'',
+    status:r.status||'FULL', away:!!r.away,
+    est:est, nw:nw, hosp:hosp,
+    must:must, prefer:prefer, any:total - must - prefer,
+    target: targetFor(r.level, w), maxSlots: templateCount(r.level, w),
+    ceiling: ceilingFor(r.level, w),
+    movedOut:{any:0, prefer:0, must:0}, addedIn:{est:0, nw:0, hosp:0, urgent:0, disch:0},
+    offset:0, startTotal: total
+  };
+}
+function pTotal(p){ return p.est + p.nw + p.hosp; }
+function pRoom(p){ return Math.max(0, Math.min(p.target, p.maxSlots) - pTotal(p)); }
+
+/* take one patient out of a resident's day, preferring the least-fixed class */
+function removeOne(p, cat){
+  if(p[cat] <= 0) return false;
+  p[cat]--;
+  if(p.est > 0) p.est--; else if(p.nw > 0) p.nw--; else if(p.hosp > 0) p.hosp--;
+  p.movedOut[cat]++;
+  return true;
+}
+function addOne(p, kind, cat){
+  if(kind === 'nw') p.nw++; else if(kind === 'hosp') p.hosp++; else p.est++;
+  p[cat || 'any']++;
+  return true;
+}
+
+function buildDay(input){
+  var date = input.date, w = weekdayOf(date);
+  var att  = input.attendings || S.attendings;
+  var per  = preceptsFor(w);
+  var cap  = att * per;
+  var q    = input.queues || {urgent:0, disch:0, wait:0, newpts:0};
+  var daysOut = input.daysOut == null ? 0 : input.daysOut;
+  var frozenReleased = daysOut <= 2;
+
+  var log = [], moves = [], warnings = [];
+  var people = (input.residents||[]).filter(function(r){ return r.present !== false; }).map(function(r){ return mkPerson(r, w); });
+
+  if(!people.length){
+    return {date:date, weekday:w, cap:cap, people:[], log:['Nobody is in clinic on this date.'],
+            moves:[], warnings:['No residents in clinic — check the date, or Tab 1.'], lanes:[], attendings:att};
+  }
+  function grandTotal(){ return people.reduce(function(a,p){ return a + pTotal(p); }, 0); }
+
+  /* ---- STEP 1 · LOCK ---- */
+  var lockedMust = people.reduce(function(a,p){return a+p.must;},0);
+  var lockedPref = people.reduce(function(a,p){return a+p.prefer;},0);
+  log.push('LOCK — held ' + lockedMust + ' "must see own doctor" and ' + lockedPref +
+           ' "prefer own team" visits exactly where they are. They are not moved unless the doctor is away.');
+
+  /* ---- STEP 2 · CAP ---- */
+  var startTotal = grandTotal();
+  people.forEach(function(p){
+    var guard = 0;
+    while(pTotal(p) > p.target && guard++ < 200){
+      if(p.any > 0)      removeOne(p,'any');
+      else if(p.prefer > 0) removeOne(p,'prefer');
+      else break;
+    }
+    guard = 0;
+    while(pTotal(p) > p.maxSlots && guard++ < 200){       /* hard maximum = template slots */
+      if(p.any > 0) removeOne(p,'any');
+      else if(p.prefer > 0) removeOne(p,'prefer');
+      else if(p.must > 0){ removeOne(p,'must');
+        warnings.push(drName(p.name) + ' was booked past the number of slots in the template, so even a "must see own doctor" visit had to move. Please ring that patient yourself.');
+      } else break;
+    }
+  });
+  var over = grandTotal() - cap;
+  if(over > 0){
+    var passes = [['PGY-2','any'],['PGY-1','any'],['PGY-2','prefer'],['PGY-1','prefer']];
+    for(var pi=0; pi<passes.length && over>0; pi++){
+      var lvl = passes[pi][0], cat = passes[pi][1], guard2 = 0;
+      while(over > 0 && guard2++ < 600){
+        var pool = people.filter(function(p){ return p.level === lvl && p[cat] > 0; });
+        if(!pool.length) break;
+        pool.sort(function(a,b){ return pTotal(b) - pTotal(a); });   /* busiest first */
+        removeOne(pool[0], cat); over--;
+      }
+    }
+    if(over > 0) warnings.push('Even after moving everything movable, the day is still ' + over +
+      ' patient(s) over the supervision cap. Add an attending, or ring the last ' + over + ' patients to reschedule.');
+  }
+  var movedTotal = people.reduce(function(a,p){ return a + p.movedOut.any + p.movedOut.prefer + p.movedOut.must; },0);
+  log.push('CAP — targets applied (' + describeTargets(w) + ') and supervision cap of ' + cap +
+           ' (' + att + ' attending' + (att===1?'':'s') + ' × ' + per + (w===4?' Thursday AM':'') + '). ' +
+           (movedTotal ? movedTotal + ' patient(s) need to move — "any doctor" first, PGY-1 protected.'
+                       : 'Nothing needed to move.'));
+
+  /* move list sentences */
+  people.forEach(function(p){
+    var n = p.movedOut.any + p.movedOut.prefer + p.movedOut.must;
+    if(!n) return;
+    var nd = nextClinicDates(p.name, date, 2, true);
+    var bits = [];
+    if(p.movedOut.any)    bits.push(p.movedOut.any + ' "any doctor"');
+    if(p.movedOut.prefer) bits.push(p.movedOut.prefer + ' "prefer own team"');
+    if(p.movedOut.must)   bits.push(p.movedOut.must + ' "must see own doctor"');
+    moves.push('Move ' + bits.join(' and ') + ' patient(s) off ' + drName(p.name) + ' — ' +
+      (nd.length ? 'their next clinic date' + (nd.length>1?'s are ':' is ') + nd.map(prettyDate).join(' or ') + '.'
+                 : 'they have no further clinic date this year, so offer the firm partner ' +
+                   (p.partner ? drName(p.partner) : 'or any open doctor') + '.'));
+  });
+
+  /* ---- STEP 3 · RELEASE FROZEN ---- */
+  var placedDisch = 0, placedUrgent = 0, placedWait = 0, placedNew = 0;
+  var firmOrder = people.slice().sort(function(a,b){
+    if(a.lane !== b.lane) return a.lane < b.lane ? -1 : 1;
+    return a.level === 'PGY-2' ? -1 : 1;
+  });
+  function roomLeft(){ return cap - grandTotal(); }
+  function place(count, kind, counter){
+    var placed = 0, guard = 0;
+    while(placed < count && roomLeft() > 0 && guard++ < 500){
+      var pool = firmOrder.filter(function(p){ return pRoom(p) > 0 && slotRoomFor(p, kind, w, frozenReleased); });
+      if(!pool.length) break;
+      pool.sort(function(a,b){ return (pTotal(a)/a.target) - (pTotal(b)/b.target); });  /* emptiest first */
+      var p = pool[0];
+      addOne(p, kind === 'new' ? 'nw' : (kind === 'disch' ? 'hosp' : 'est'), 'any');
+      if(kind === 'disch') p.addedIn.disch++; else if(kind === 'urgent') p.addedIn.urgent++;
+      else if(kind === 'new') p.addedIn.nw++; else p.addedIn.est++;
+      placed++;
+    }
+    return placed;
+  }
+  placedDisch  = place(+q.disch||0,  'disch');
+  placedUrgent = place(+q.urgent||0, 'urgent');
+  placedWait   = place(+q.wait||0,   'wait');
+  placedNew    = place(+q.newpts||0, 'new');
+  var unplaced = ((+q.disch||0)-placedDisch) + ((+q.urgent||0)-placedUrgent) +
+                 ((+q.wait||0)-placedWait) + ((+q.newpts||0)-placedNew);
+  log.push('RELEASE — ' + (frozenReleased ? 'Frozen slots are released (this date is ' + daysOut + ' day(s) away). ' :
+           'Frozen slots stay hidden — this date is ' + daysOut + ' days away and they open 2 days before. ') +
+           placedDisch + ' hospital discharge(s) into HospFU/Frozen, ' + placedUrgent + ' urgent into Frozen, ' +
+           placedWait + ' from the waitlist and ' + placedNew + ' new patient(s) into open slots, firm by firm.');
+  if(unplaced > 0) warnings.push(unplaced + ' waiting patient(s) could not be fitted today. Put them on the nurse reschedule list or add an attending.');
+
+  /* ---- STEP 4 · BALANCE ---- */
+  var balanced = 0, guard3 = 0;
+  while(guard3++ < 300){
+    var over1 = people.filter(function(p){ return pTotal(p) > p.target && p.any > 0; })
+                      .sort(function(a,b){ return pTotal(b)-pTotal(a); })[0];
+    if(!over1) break;
+    var partner = people.filter(function(p){ return p.name === over1.partner && pRoom(p) > 0; })[0];
+    var lanemate = partner || people.filter(function(p){ return p !== over1 && p.lane === over1.lane && pRoom(p) > 0; })
+                      .sort(function(a,b){ return pTotal(a)-pTotal(b); })[0];
+    if(!lanemate) break;
+    removeOne(over1,'any'); over1.movedOut.any--;      /* an internal swap, not a reschedule */
+    addOne(lanemate,'est','any'); balanced++;
+    moves.push('Move 1 "any doctor" patient from ' + drName(over1.name) + ' to ' + drName(lanemate.name) +
+               ' — same firm/lane, and ' + drName(lanemate.name) + ' is still under target.');
+  }
+  log.push('BALANCE — ' + (balanced ? balanced + ' "any doctor" patient(s) shifted to a firm partner or lane-mate who is under target.'
+                                    : 'Nobody is over target, so nothing needed evening out.'));
+
+  /* ---- STEP 5 · STAGGER ---- */
+  var lanes = {}, laneIdx = 0;
+  firmOrder.forEach(function(p){
+    if(!p.lane){ p.lane = 'Lane ' + LANE_LETTERS[laneIdx++ % LANE_LETTERS.length]; }
+    (lanes[p.lane] = lanes[p.lane] || []).push(p);
+  });
+  Object.keys(lanes).forEach(function(k){
+    lanes[k].forEach(function(p,i){ p.offset = [0,10,20][i % 3]; });
+  });
+  log.push('STAGGER — residents grouped into ' + Object.keys(lanes).length + ' attending lane(s); start times offset by 0, 10 and 20 minutes inside each lane so the attending is not asked for three patients at once.');
+
+  /* ---- warnings ---- */
+  var capInfo = computeCapacity(date, att, people.map(function(p){ return {level:p.level}; }));
+  if(people.length < 4) warnings.push('Thin day — only ' + people.length + ' resident(s) in clinic. Expect to push routine work to another date.');
+  if(capInfo.targetTotal > cap) warnings.push('Targets add up to ' + capInfo.targetTotal + ' but supervision only allows ' + cap + '. Add an attending if you can.');
+  people.forEach(function(p){
+    if(pTotal(p) > p.maxSlots) warnings.push(drName(p.name) + ' is above the ' + p.maxSlots + ' slots in the template. Never shorten a slot — move a patient instead.');
+    if(p.away) warnings.push(drName(p.name) + ' is on an away rotation — ring to confirm before you rely on this clinic.');
+  });
+
+  return {
+    date:date, weekday:w, attendings:att, perAttending:per, cap:cap, startTotal:startTotal,
+    endTotal:grandTotal(), people:people, lanes:lanes, log:log, moves:moves, warnings:warnings,
+    movedTotal:movedTotal, frozenReleased:frozenReleased, daysOut:daysOut,
+    queues:{urgent:+q.urgent||0, disch:+q.disch||0, wait:+q.wait||0, newpts:+q.newpts||0},
+    placed:{disch:placedDisch, urgent:placedUrgent, wait:placedWait, newpts:placedNew, unplaced:unplaced}
+  };
+}
+
+function describeTargets(w){
+  return 'PGY-2 ' + targetFor('PGY-2',w) + ' and PGY-1 ' + targetFor('PGY-1',w) + ' per resident';
+}
+/* does this resident still have a slot of the right kind free? */
+function slotRoomFor(p, kind, w, frozenReleased){
+  var t = templateFor(p.level, w);
+  var used = pTotal(p);
+  if(p.level === 'PGY-1') return used < t.length;
+  var counts = {};
+  t.forEach(function(s){ counts[s.cls] = (counts[s.cls]||0)+1; });
+  if(kind === 'disch') return (counts.HospFU||0) + (frozenReleased ? (counts.FROZEN||0) : 0) > p.addedIn.disch;
+  if(kind === 'urgent') return frozenReleased && (counts.FROZEN||0) > p.addedIn.urgent;
+  return used < t.length - (frozenReleased ? 0 : (counts.FROZEN||0));
+}
+
+/* ------------------------- SOMEONE CALLED OUT ---------------------------- */
+
+function sameDayFallback(absentName, day){
+  var w = day.weekday, res = {absent:absentName, mustPlaced:0, preferPlaced:0, anyPlaced:0,
+      placements:[], toNextDate:[], nurseList:0, steps:[], moves:[], changed:{}};
+  var people = day.people;
+  var gone = people.filter(function(p){ return p.name === absentName; })[0];
+  if(!gone){ res.steps.push(absentName + ' is not in today’s clinic list, so nothing needs to move.'); return res; }
+
+  var must = gone.must, prefer = gone.prefer, any = gone.any;
+  var totalGone = pTotal(gone);
+  res.startCounts = {must:must, prefer:prefer, any:any, total:totalGone};
+  res.steps.push(drName(absentName) + ' is out. ' + totalGone + ' booked patient(s): ' +
+    must + ' must see own doctor, ' + prefer + ' prefer own team, ' + any + ' any doctor.');
+
+  var partner = people.filter(function(p){ return p.name === gone.partner; })[0];
+  function capacityOf(p, extraAllowed){ return Math.max(0, Math.min(p.target + (extraAllowed||0), p.maxSlots) - pTotal(p)); }
+
+  /* 1 — must see own doctor → firm partner, up to +2 over target */
+  if(partner && must > 0){
+    var take = Math.min(must, capacityOf(partner, 2));
+    for(var i=0;i<take;i++){ addOne(partner,'est','must'); }
+    if(take){
+      res.mustPlaced = take; res.changed[partner.name] = (res.changed[partner.name]||0) + take;
+      res.moves.push('Give ' + take + ' "must see own doctor" patient(s) to firm partner ' + drName(partner.name) +
+        ' — that puts them at ' + pTotal(partner) + ', which is ' + Math.max(0, pTotal(partner)-partner.target) +
+        ' over their target of ' + partner.target + ' (2 over is the most we allow).');
+    }
+    must -= take;
+  }
+  if(must > 0){
+    var nd = nextClinicDates(absentName, day.date, 3, true);
+    res.toNextDate.push({count:must, dates:nd});
+    res.moves.push('The remaining ' + must + ' "must see own doctor" patient(s) go to ' + drName(absentName) +
+      '’s own next clinic date' + (nd.length>1?'s':'') + ': ' +
+      (nd.length ? nd.map(prettyDate).join(', ') : 'none left this year — put them on the nurse list'));
+    if(!nd.length) res.nurseList += must;
+  }
+
+  /* 2 — prefer own team → partner, then same lane */
+  if(prefer > 0 && partner){
+    var t2 = Math.min(prefer, capacityOf(partner, 0));
+    for(var j=0;j<t2;j++) addOne(partner,'est','prefer');
+    if(t2){ res.preferPlaced += t2; res.changed[partner.name] = (res.changed[partner.name]||0)+t2;
+      res.moves.push('Move ' + t2 + ' "prefer own team" patient(s) to firm partner ' + drName(partner.name) + ' (still at or under target).'); }
+    prefer -= t2;
+  }
+  if(prefer > 0){
+    var lane = people.filter(function(p){ return p !== gone && p.lane === gone.lane && capacityOf(p,0) > 0; })
+                     .sort(function(a,b){ return pTotal(a)-pTotal(b); });
+    for(var k=0; k<lane.length && prefer>0; k++){
+      var room = Math.min(prefer, capacityOf(lane[k],0));
+      for(var m=0;m<room;m++) addOne(lane[k],'est','prefer');
+      if(room){ res.preferPlaced += room; res.changed[lane[k].name] = (res.changed[lane[k].name]||0)+room;
+        res.moves.push('Move ' + room + ' "prefer own team" patient(s) to ' + drName(lane[k].name) + ' — same attending lane (' + gone.lane + ').'); }
+      prefer -= room;
+    }
+  }
+  if(prefer > 0){ res.nurseList += prefer;
+    res.moves.push(prefer + ' "prefer own team" patient(s) have nowhere in the team today — nurse reschedule list.'); }
+
+  /* 3 — any doctor → any open slot today */
+  if(any > 0){
+    var open = people.filter(function(p){ return p !== gone && capacityOf(p,0) > 0; })
+                     .sort(function(a,b){ return pTotal(a)-pTotal(b); });
+    for(var n=0; n<open.length && any>0; n++){
+      var room2 = Math.min(any, capacityOf(open[n],0));
+      for(var z=0;z<room2;z++) addOne(open[n],'est','any');
+      if(room2){ res.anyPlaced += room2; res.changed[open[n].name] = (res.changed[open[n].name]||0)+room2;
+        res.moves.push('Move ' + room2 + ' "any doctor" patient(s) to ' + drName(open[n].name) + ' — open slot today.'); }
+      any -= room2;
+    }
+  }
+  if(any > 0){ res.nurseList += any;
+    res.moves.push(any + ' "any doctor" patient(s) could not be placed today — nurse reschedule list.'); }
+
+  /* empty the absent doctor's column */
+  gone.est = 0; gone.nw = 0; gone.hosp = 0; gone.must = 0; gone.prefer = 0; gone.any = 0; gone.absent = true;
+  res.steps.push('Placed today: ' + res.mustPlaced + ' with the firm partner, ' + res.preferPlaced +
+    ' inside the team, ' + res.anyPlaced + ' anywhere open. Nurse reschedule list: ' + res.nurseList + '.');
+  return res;
+}
+
+function attendingDropped(day){
+  var newAtt = Math.max(1, day.attendings - 1);
+  var rebuilt = buildDay({
+    date: day.date, attendings: newAtt, daysOut: day.daysOut,
+    residents: day.people.map(function(p){
+      return {name:p.name, level:p.level, lane:p.lane, partner:p.partner, present:true,
+              est:p.est, nw:p.nw, hosp:p.hosp, must:p.must, prefer:p.prefer};
+    }),
+    queues:{urgent:0, disch:0, wait:0, newpts:0}
+  });
+  return rebuilt;
+}
+
+/* ------------------------------ RENDERERS -------------------------------- */
+
+function todayISO(){ return toISO(new Date()); }
+function defaultDate(){
+  var t = todayISO();
+  if(t < YEAR_START) return YEAR_START;
+  if(t > YEAR_END)   return YEAR_START;
+  if(!isWeekday(t))  { var d=t; while(!isWeekday(d)) d = addDays(d,1); return d; }
+  return t;
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+  return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function el(id){ return document.getElementById(id); }
+function go(tab){
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.add('hidden'); });
+  el('tab-'+tab).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('on', b.dataset.tab===tab); });
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(tab==='year' && !el('yearOut').innerHTML) renderHeatmap();
+  if(tab==='day'  && !el('dayRoster').innerHTML) renderDayRoster();
+  if(tab==='set'  && !el('setRoster').innerHTML) renderSettings();
+}
+function setToday(id){ el(id).value = defaultDate(); }
+function stepAtt(id, d){
+  var i = el(id); i.value = Math.max(1, Math.min(5, (+i.value||3) + d));
+  if(id==='t1att') renderWho(); else updateDayBanner();   /* never wipe typed counts */
+}
+function dismissBanner(){ S.bannerDismissed = true; persist(); el('electiveBanner').classList.add('hidden'); }
+function weekdayBadge(w){
+  if(w===0||w===6) return '<span class="badge b-none">'+WD_NAME[w]+' — no clinic</span>';
+  if(w===4) return '<span class="badge b-day">Thursday — morning only</span>';
+  if(w===5) return '<span class="badge b-day">Friday — starts at 9:00</span>';
+  return '<span class="badge b-day">'+WD_NAME[w]+' — full day</span>';
+}
+function statusBadge(r){
+  if(r.away) return '<span class="badge b-away">away — confirm ('+WD_SHORT[r.electiveDay]+')</span>';
+  if(r.status==='FULL') return '<span class="badge b-full">FULL WEEK</span>';
+  return '<span class="badge b-elec">elective day ('+WD_SHORT[r.electiveDay]+')</span>';
+}
+function tile(cls, label, num, rule){
+  return '<div class="tile '+cls+'"><div class="tile-l">'+label+'</div><div class="tile-n">'+num+
+         '</div><div class="rule">'+rule+'</div></div>';
+}
+
+/* ---- TAB 1 ---- */
+function renderWho(){
+  var date = el('t1date').value, att = +el('t1att').value || 3, out = el('whoOut');
+  if(!date){ out.innerHTML = '<div class="card"><div class="banner info">Pick a date to begin.</div></div>'; return; }
+  var b = blockForDate(date);
+  if(!b){ out.innerHTML = '<div class="card"><div class="banner bad">'+esc(outsideYearMessage(date))+'</div></div>'; return; }
+  var w = weekdayOf(date), present = residentsOnDate(date), cap = computeCapacity(date, att, present);
+
+  var html = '<div class="card"><h2>'+esc(longDate(date))+'</h2>'+
+    '<p class="sub">Block '+b.n+' &nbsp;·&nbsp; '+esc(b.dates)+'</p>'+ weekdayBadge(w);
+
+  if(w===0||w===6){
+    html += '<div class="banner warn">There is no resident clinic at the weekend. Pick a Monday to Friday.</div></div>';
+    out.innerHTML = html; return;
+  }
+  html += '<div class="tiles">'+
+    tile('blue','Residents today', present.length, 'from the block schedule for B'+b.n) +
+    tile('teal','Template slots', cap.slots, 'every slot in everybody’s template'+(w===4?' (Thu AM only)':'')) +
+    tile('green','Target total', cap.targetTotal, describeTargets(w)) +
+    tile('amber','Supervision cap', cap.cap, cap.rules.cap) +
+    tile('purple','Room for advance bookings', cap.ceilingTotal, 'sum of each ceiling = '+cap.rules.ceiling) +
+    '</div>';
+  if(cap.thin) html += '<div class="banner warn"><b>Thin day.</b> Only '+present.length+' resident(s) in clinic. Keep routine bookings off this date if you can.</div>';
+  if(present.length===0) html += '<div class="banner bad">Nobody is in clinic on this date. Try another weekday.</div>';
+  if(cap.overSupervision) html += '<div class="banner bad"><b>Over supervision.</b> Targets add up to '+cap.targetTotal+
+    ' but '+att+' attending(s) can only precept '+cap.cap+'. Add an attending, or plan to book only '+cap.bookable+'.</div>';
+  html += '</div>';
+
+  function col(level){
+    var list = present.filter(function(r){ return r.level===level; });
+    var s = '<div class="card"><h3>'+level+' &nbsp;<span class="rule">'+list.length+' in clinic</span></h3>';
+    if(!list.length) s += '<p class="sub">Nobody from '+level+' is in clinic on this date.</p>';
+    list.forEach(function(r){
+      s += '<div class="chip"><span class="nm">'+esc(r.name)+'</span>'+statusBadge(r)+'</div>';
+    });
+    return s + '</div>';
+  }
+  html += '<div class="twocol">'+col('PGY-2')+col('PGY-1')+'</div>';
+  out.innerHTML = html;
+}
+
+/* ---- TAB 2 ---- */
+var whenBooked = {};
+function renderWhen(){
+  var name = el('t2res').value, out = el('whenOut');
+  if(!name){ out.innerHTML=''; return; }
+  var res = adviseBooking({
+    resident:name, from: el('t2from').value || defaultDate(),
+    weeks:+el('t2weeks').value, tol:+el('t2tol').value,
+    visitType: el('t2type').value, continuity: el('t2cont').value,
+    attendings: S.attendings, booked: whenBooked
+  });
+  var strip = res.strip.map(function(b){
+    return '<div class="blk '+b.code+(b.current?' now':'')+'" title="Block '+b.n+' · '+esc(b.dates)+' · '+esc(b.label)+'">'+
+           '<b>B'+b.n+'</b>'+esc(b.label)+'</div>';
+  }).join('');
+
+  var html = '<div class="card"><h2>'+esc(drName(name))+' &nbsp;<span class="rule">'+esc(name)+' · '+esc(levelOf(name))+'</span></h2>'+
+    '<p class="sub">The whole year at a glance for this doctor. Green = in clinic all week · yellow = one day a week · grey = no clinic · striped = away.</p>'+
+    '<div class="strip">'+strip+'</div>'+
+    '<p class="rule">Window searched: '+esc(prettyDate(res.windowStart))+' to '+esc(prettyDate(res.windowEnd))+
+    ' (' + el('t2weeks').value + ' weeks out, ± ' + el('t2tol').value + ' weeks).</p></div>';
+
+  html += '<div class="card"><div class="reco'+(res.dates.length?'':' none')+'">'+esc(res.recommendation)+'</div>'+
+          '<p class="rule" style="margin-top:10px">'+esc(res.ruleNote)+'</p></div>';
+
+  function dateTable(list, title){
+    if(!list.length) return '';
+    var s = '<div class="card"><h3>'+title+'</h3><div class="scroll"><table><tr><th>Date</th><th>Type of day</th>'+
+      '<th>Residents in clinic</th><th>Supervision</th><th>Usable slots</th><th>Already booked</th><th>Ceiling left</th></tr>';
+    list.forEach(function(d){
+      s += '<tr><td><b>'+esc(prettyDate(d.date))+'</b><br><span class="rule">'+esc(d.date)+'</span></td>'+
+        '<td>'+(d.status==='ELECTIVE_DAY'?'elective day':'full week')+(d.away?' <span class="badge b-away">confirm</span>':'')+
+        (d.thursdayAM?'<br><span class="rule">Thursday AM only</span>':'')+'</td>'+
+        '<td class="mono">'+d.residents+'</td>'+
+        '<td>'+esc(d.supervision)+'<br><span class="rule">cap '+d.cap+' vs targets '+d.targetTotal+'</span></td>'+
+        '<td class="mono">'+d.usable+' of '+d.slots+'</td>'+
+        '<td><input type="number" min="0" value="'+d.bookedAlready+'" style="width:70px" '+
+            'onchange="whenBooked[\''+d.date+'\']=+this.value; renderWhen();"></td>'+
+        '<td class="mono">'+d.ceilingLeft+' of '+d.ceiling+'</td></tr>';
+    });
+    return s + '</table></div><p class="rule">Ceiling = '+S.ceilingPct+'% of the daily target, rounded down. The other '+
+      (100-S.ceilingPct)+'% is held back for Frozen slots, hospital follow-ups and same-day flex.</p></div>';
+  }
+  html += dateTable(res.dates, 'Clinic dates inside your window');
+  html += dateTable(res.nearestBefore, 'Nearest clinic dates BEFORE the window');
+  html += dateTable(res.nearestAfter,  'Nearest clinic dates AFTER the window');
+  out.innerHTML = html;
+}
+
+/* ---- TAB 3 ---- */
+function renderHeatmap(){
+  var out = el('yearOut'), months = [], iso = YEAR_START;
+  var byMonth = {};
+  var guard = 0;
+  while(iso <= YEAR_END && guard++ < 460){
+    var d = parseISO(iso), key = d.getFullYear()+'-'+(d.getMonth()+1);
+    if(!byMonth[key]){ byMonth[key] = {label: ['January','February','March','April','May','June','July','August',
+      'September','October','November','December'][d.getMonth()] + ' ' + d.getFullYear(), days: [], firstWd: null}; months.push(key); }
+    if(isWeekday(iso)){
+      var list = residentsOnDate(iso);
+      if(byMonth[key].firstWd === null) byMonth[key].firstWd = weekdayOf(iso);
+      byMonth[key].days.push({iso:iso, n:list.length, names:list.map(function(r){ return r.name + (r.status==='ELECTIVE_DAY'?' (elective)':''); })});
+    }
+    iso = addDays(iso,1);
+  }
+  var html = '<div class="card"><div class="hm-months">';
+  months.forEach(function(k){
+    var m = byMonth[k];
+    html += '<div class="hm-month"><h4>'+esc(m.label)+'</h4><div class="hm-grid">'+
+      ['Mon','Tue','Wed','Thu','Fri'].map(function(x){ return '<div class="hm-hd">'+x+'</div>'; }).join('');
+    for(var i=1;i<m.firstWd;i++) html += '<div class="hm-d blank"></div>';
+    m.days.forEach(function(day){
+      var cls = day.n===0 ? 'zero' : (day.n<4 ? 'thin' : (day.n<10 ? 'good' : 'heavy'));
+      var title = prettyDate(day.iso)+' — '+day.n+' resident'+(day.n===1?'':'s')+' in clinic'+
+                  (day.n? ':\n'+day.names.join('\n') : ' (nobody)');
+      html += '<div class="hm-d '+cls+'" data-date="'+day.iso+'" title="'+esc(title)+'" onclick="jumpToDate(\''+day.iso+'\')">'+
+        '<span class="dn">'+parseISO(day.iso).getDate()+'</span><span class="ct">'+day.n+'</span></div>';
+    });
+    html += '</div></div>';
+  });
+  out.innerHTML = html + '</div></div>';
+}
+function jumpToDate(iso){ el('t1date').value = iso; go('who'); renderWho(); }
+
+/* ---- TAB 4 ---- */
+function renderDayRoster(){
+  var date = el('t4date').value || defaultDate();
+  el('t4date').value = date;
+  var host = el('dayRoster');
+  var b = blockForDate(date);
+  if(!b){ host.innerHTML = '<div class="banner bad">'+esc(outsideYearMessage(date))+'</div>'; return; }
+  var w = weekdayOf(date);
+  if(w===0||w===6){ host.innerHTML = '<div class="banner warn">'+WD_NAME[w]+' — no resident clinic. Pick a weekday.</div>'; return; }
+  var present = residentsOnDate(date);
+  var html = '<div id="dayBanner"></div>';
+  if(!present.length){ host.innerHTML = html + '<div class="banner bad">Nobody is in clinic on this date.</div>'; updateDayBanner(); return; }
+  html += '<div class="scroll"><table id="dayTable"><tr><th>Here today?</th><th>Resident</th><th>Level / lane</th>'+
+    '<th>Target</th><th>Est booked</th><th>New booked</th><th>Hosp F/U</th><th>Must see own</th><th>Prefer own team</th></tr>';
+  present.forEach(function(r,i){
+    var t = targetFor(r.level,w), mx = templateCount(r.level,w);
+    html += '<tr data-name="'+esc(r.name)+'" data-level="'+r.level+'" data-lane="'+esc(r.lane||'')+'" data-partner="'+esc(r.partner||'')+'">'+
+      '<td style="text-align:center"><input type="checkbox" class="dPresent" checked title="Untick if they are not here today"></td>'+
+      '<td><b>'+esc(r.name)+'</b><br>'+statusBadge(r)+'</td>'+
+      '<td>'+r.level+'<br><span class="rule">'+esc(r.lane||'—')+(r.partner?' · firm with '+esc(drName(r.partner)):'')+'</span></td>'+
+      '<td class="mono">'+t+'<br><span class="rule">max '+mx+'</span></td>'+
+      '<td><input type="number" class="dEst"  min="0" value="0" style="width:64px"></td>'+
+      '<td><input type="number" class="dNew"  min="0" value="0" style="width:64px"></td>'+
+      '<td><input type="number" class="dHosp" min="0" value="0" style="width:64px"></td>'+
+      '<td><input type="number" class="dMust" min="0" value="0" style="width:64px"></td>'+
+      '<td><input type="number" class="dPref" min="0" value="0" style="width:64px"></td></tr>';
+  });
+  html += '</table></div>';
+  host.innerHTML = html;
+  updateDayBanner();
+  fillCallOutSelect(present);
+}
+/* the cap line above the roster — refreshed on its own so typed counts survive */
+function updateDayBanner(){
+  var host = el('dayBanner'); if(!host) return;
+  var date = el('t4date').value, b = blockForDate(date);
+  if(!b){ host.innerHTML = ''; return; }
+  var w = weekdayOf(date), present = residentsOnDate(date);
+  var cap = computeCapacity(date, +el('t4att').value||3, present);
+  host.innerHTML = '<div class="banner info">Block '+b.n+' · '+esc(b.dates)+' · '+WD_NAME[w]+
+    (w===4?' (morning only)':(w===5?' (starts 9:00)':''))+' · '+present.length+' resident(s) · supervision cap '+cap.cap+
+    ' <span class="rule">('+esc(cap.rules.cap)+')</span></div>';
+}
+function readDayInputs(){
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#dayTable tr[data-name]'));
+  return rows.map(function(tr){
+    function v(c){ var n = tr.querySelector('.'+c); return n ? +n.value||0 : 0; }
+    return {name:tr.dataset.name, level:tr.dataset.level, lane:tr.dataset.lane, partner:tr.dataset.partner,
+            present: tr.querySelector('.dPresent').checked,
+            est:v('dEst'), nw:v('dNew'), hosp:v('dHosp'), must:v('dMust'), prefer:v('dPref')};
+  });
+}
+var DAY = null;
+function runBuildDay(){
+  var date = el('t4date').value;
+  if(!blockForDate(date)){ el('dayOut').innerHTML = '<div class="card"><div class="banner bad">'+esc(outsideYearMessage(date))+'</div></div>'; return; }
+  DAY = buildDay({
+    date: date, attendings: +el('t4att').value||3,
+    daysOut: Math.max(0, daysBetween(todayISO(), date)),
+    residents: readDayInputs(),
+    queues:{urgent:+el('qUrgent').value||0, disch:+el('qDisch').value||0,
+            wait:+el('qWait').value||0, newpts:+el('qNew').value||0}
+  });
+  layoutDay(DAY);
+  el('dayOut').innerHTML = renderDayOutput(DAY, null);
+}
+function renderDayOutput(day, cascade){
+  var w = day.weekday;
+  var html = '<div class="card noprint"><h2>What I did</h2>'+
+    '<p class="sub">Every step, in the order the tool did it.</p><ol class="steps">'+
+    day.log.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ol>'+
+    '<div class="tiles">'+
+      tile('blue','Booked before', day.startTotal, 'what you typed in') +
+      tile('green','Booked after', day.endTotal, 'after caps, moves and releases') +
+      tile('amber','Supervision cap', day.cap, day.attendings+' attending(s) × '+day.perAttending+(w===4?' (Thu AM)':'')) +
+      tile('purple','Patients to move', day.movedTotal, 'listed below in plain sentences') +
+    '</div></div>';
+
+  if(day.warnings.length) html += '<div class="card noprint"><h2>Warnings</h2>'+
+    day.warnings.map(function(s){ return '<div class="banner warn">'+esc(s)+'</div>'; }).join('')+'</div>';
+
+  html += '<div class="card"><h2>The day</h2>'+
+    '<p class="sub noprint">Click any block to switch it between booked, open and hold. '+
+    'Blue = follow-up · teal = new patient · amber = hospital follow-up · red outline = released Frozen · purple = PGY-1 (60 min) · striped = lunch.</p>'+
+    renderGrid(day) + '</div>';
+
+  var moves = (cascade ? cascade.moves : day.moves);
+  html += '<div class="card"><h2>Move list</h2>'+
+    (moves.length ? '<ol class="steps moves">'+moves.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ol>'
+                  : '<div class="banner ok">Nothing needs to move. The day fits.</div>')+'</div>';
+
+  html += '<div class="card noprint"><div class="row">'+
+    '<button class="btn ghost" onclick="window.print()">Print the day</button>'+
+    '<button class="btn ghost" onclick="copySummary()">Copy summary</button>'+
+    '<button class="btn ghost" onclick="go(\'out\')">Someone called out →</button></div>'+
+    '<p class="rule" style="margin-top:8px">Printing gives you the day grid and the move list only.</p></div>';
+  return html;
+}
+
+/* layout: turn counts into real blocks on the template */
+function layoutDay(day){
+  day.people.forEach(function(p){
+    p.cells = layoutResident(p, day.weekday, day.frozenReleased);
+  });
+}
+function layoutResident(p, w, frozenReleased){
+  var cells = templateFor(p.level, w).map(function(s){
+    return {m:s.m, min:s.min, cls:s.cls, state:'open', label:'Open', released:false, hilite:false};
+  });
+  var hosp = p.hosp, nw = p.nw, est = p.est;
+  function fill(match, state, label, mark){
+    cells.forEach(function(c){
+      if(c.state==='open' && match(c) && mark.n > 0){ c.state=state; c.label=label; mark.n--; if(c.cls==='FROZEN') c.released=true; }
+    });
+  }
+  if(p.level === 'PGY-1'){
+    var h={n:hosp}, nn={n:nw}, e={n:est};
+    fill(function(c){return c.cls==='Any';}, 'any', 'Hosp F/U', h);
+    fill(function(c){return c.cls==='Any';}, 'any', 'New pt', nn);
+    fill(function(c){return c.cls==='Any';}, 'any', 'Follow-up', e);
+  } else {
+    var H={n:hosp};
+    fill(function(c){return c.cls==='HospFU';}, 'hosp', 'Hosp F/U', H);
+    if(frozenReleased) fill(function(c){return c.cls==='FROZEN';}, 'hosp', 'Hosp F/U', H);
+    var N={n:nw};
+    fill(function(c){return c.cls==='New';}, 'new', 'New pt', N);
+    var E={n:est};
+    fill(function(c){return c.cls==='Est';}, 'est', 'Follow-up', E);
+    var spill = {n: E.n + N.n + H.n};
+    fill(function(c){return c.cls==='New';}, 'est', 'Follow-up', spill);
+    if(frozenReleased) fill(function(c){return c.cls==='FROZEN';}, 'est', 'Released', spill);
+  }
+  cells.forEach(function(c){
+    if(c.state==='open' && c.cls==='FROZEN'){
+      c.state='frozen'; c.label = frozenReleased ? 'Frozen — released' : 'Frozen — opens in 2 days';
+    }
+  });
+  return cells;
+}
+
+var GRID_TIMES = [];
+(function(){ for(var m=480;m<=990;m+=30) GRID_TIMES.push(m); })();
+
+function renderGrid(day, changed){
+  var people = day.people;
+  if(!people.length) return '<div class="banner warn">Nobody in clinic — nothing to draw.</div>';
+  var html = '<div class="gridwrap"><table class="daygrid"><tr><th class="res" style="min-width:62px">Time</th>';
+  people.forEach(function(p){
+    html += '<th class="res">'+esc(drName(p.name))+
+      '<span class="lane">'+esc(p.lane||'—')+' · +'+p.offset+' min · '+(p.level==='PGY-1'?'PGY-1':'PGY-2')+
+      (p.absent?' · OUT':'')+'</span></th>';
+  });
+  html += '</tr>';
+  var skip = people.map(function(){ return 0; });
+  GRID_TIMES.forEach(function(m){
+    var lunch = (m===720 || m===750);
+    html += '<tr><td class="tcol">'+minToShort(m)+'</td>';
+    people.forEach(function(p,i){
+      if(skip[i] > 0){ skip[i]--; return; }
+      if(lunch){ html += '<td><div class="slot s-lunch">lunch</div></td>'; return; }
+      var c = (p.cells||[]).filter(function(x){ return x.m === m; })[0];
+      if(!c){ html += '<td><div class="slot s-none">&nbsp;</div></td>'; return; }
+      var span = Math.max(1, Math.round(c.min/30));
+      if(span > 1) skip[i] = span - 1;
+      var cls = c.state==='est' ? 's-est' : c.state==='new' ? 's-new' : c.state==='hosp' ? 's-hosp' :
+                c.state==='any' ? 's-any' : c.state==='frozen' ? 's-frozen' : c.state==='hold' ? 's-hold' : 's-open';
+      if(c.released && (c.state==='est'||c.state==='hosp')) cls += ' s-frozen';
+      var mark = (changed && changed[p.name]) ? ' added' : '';
+      var t = minToShort(m + (p.offset||0));
+      html += '<td rowspan="'+span+'"><div class="slot '+cls+mark+'" title="'+esc(c.cls+' slot · '+minToTime(m)+' · start '+t)+'" '+
+        'onclick="toggleSlot('+i+','+m+')">'+esc(c.label)+'<small>'+t+' · '+esc(c.cls)+'</small></div></td>';
+    });
+    html += '</tr>';
+  });
+  return html + '</table></div>';
+}
+function toggleSlot(pi, m){
+  if(!DAY) return;
+  var p = DAY.people[pi], c = (p.cells||[]).filter(function(x){ return x.m===m; })[0];
+  if(!c) return;
+  if(c.state === 'open'){ c.state = p.level==='PGY-1' ? 'any' : (c.cls==='New'?'new':c.cls==='HospFU'?'hosp':'est'); c.label='Booked'; }
+  else if(c.state === 'hold'){ c.state='open'; c.label='Open'; }
+  else if(c.state === 'frozen'){ c.state='hold'; c.label='Hold'; }
+  else { c.state='hold'; c.label='Hold'; }
+  var host = document.querySelector('#dayOut .gridwrap');
+  if(host) host.outerHTML = renderGrid(DAY, LAST_CHANGED);
+}
+var LAST_CHANGED = null;
+
+function copySummary(){
+  if(!DAY){ alert('Build the day first.'); return; }
+  var lines = ['TEMPO Scheduler — ' + longDate(DAY.date),
+    'Residents: ' + DAY.people.length + ' · attendings: ' + DAY.attendings + ' · supervision cap: ' + DAY.cap,
+    'Booked before: ' + DAY.startTotal + ' · after: ' + DAY.endTotal, '', 'WHAT I DID'];
+  DAY.log.forEach(function(s,i){ lines.push((i+1)+'. '+s); });
+  lines.push('', 'MOVE LIST');
+  (DAY.moves.length?DAY.moves:['Nothing needs to move.']).forEach(function(s,i){ lines.push((i+1)+'. '+s); });
+  if(DAY.warnings.length){ lines.push('', 'WARNINGS'); DAY.warnings.forEach(function(s,i){ lines.push((i+1)+'. '+s); }); }
+  lines.push('', 'No patient names — counts only.');
+  var txt = lines.join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ alert('Summary copied — paste it into an email or a note.'); },
+      function(){ window.prompt('Copy this:', txt); });
+  } else window.prompt('Copy this:', txt);
+}
+
+/* ---- TAB 5 ---- */
+function fillCallOutSelect(present){
+  var sel = el('t5who'); if(!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="__ATT__">An attending dropped</option>' +
+    (present||[]).map(function(r){ return '<option value="'+esc(r.name)+'">'+esc(r.name)+' ('+r.level+')</option>'; }).join('');
+  if(cur) sel.value = cur;
+}
+function runCallOut(){
+  var out = el('outOut');
+  if(!DAY){ out.innerHTML = '<div class="card"><div class="banner warn">Build the day in Tab 4 first, then come back here — the tool needs to know what was booked.</div></div>'; return; }
+  var who = el('t5who').value;
+  if(who === '__ATT__'){
+    var rebuilt = attendingDropped(DAY);
+    layoutDay(rebuilt); DAY = rebuilt; LAST_CHANGED = null;
+    out.innerHTML = '<div class="card noprint"><h2>An attending dropped</h2>'+
+      '<div class="banner bad">Supervision cap falls to '+rebuilt.cap+' ('+rebuilt.attendings+' attending(s) × '+rebuilt.perAttending+'). '+
+      rebuilt.movedTotal+' patient(s) now have to move.</div>'+
+      '<ol class="steps">'+rebuilt.log.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ol></div>'+
+      renderDayOutput(rebuilt, null);
+    return;
+  }
+  var casc = sameDayFallback(who, DAY);
+  LAST_CHANGED = casc.changed;
+  layoutDay(DAY);
+  var html = '<div class="card noprint"><h2>'+esc(drName(who))+' is out</h2>'+
+    '<ol class="steps">'+casc.steps.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ol>'+
+    '<div class="tiles">'+
+      tile('green','To the firm partner', casc.mustPlaced, '"must see own doctor", up to 2 over target') +
+      tile('blue','Kept inside the team', casc.preferPlaced, '"prefer own team" → partner, then same lane') +
+      tile('purple','Any open slot today', casc.anyPlaced, '"any doctor" → anywhere with room') +
+      tile('red','Nurse reschedule list', casc.nurseList, 'nowhere left today') +
+    '</div></div>';
+  html += '<div class="card"><h2>The plan</h2><ol class="steps moves">'+
+    (casc.moves.length?casc.moves:['Nothing to move.']).map(function(s){ return '<li>'+esc(s)+'</li>'; }).join('')+'</ol></div>';
+  if(casc.toNextDate.length){
+    html += '<div class="card noprint"><h3>Going to '+esc(drName(who))+'’s own next clinic dates</h3><ul>'+
+      casc.toNextDate.map(function(t){ return '<li>'+t.count+' patient(s) → '+
+        (t.dates.length ? t.dates.map(prettyDate).join(', ') : 'no clinic date left this year') + '</li>'; }).join('')+'</ul></div>';
+  }
+  html += '<div class="card"><h2>The day, re-drawn</h2><p class="sub noprint">Green outline = a patient landed here because of the call-out.</p>'+
+    renderGrid(DAY, casc.changed)+'</div>'+
+    '<div class="card noprint"><button class="btn ghost" onclick="window.print()">Print the day</button></div>';
+  out.innerHTML = html;
+}
+
+/* ---------------------------- SETTINGS UI -------------------------------- */
+
+function renderSettings(){
+  el('sT2mw').value = S.targets['PGY-2'].mw; el('sT2th').value = S.targets['PGY-2'].th; el('sT2fr').value = S.targets['PGY-2'].fr;
+  el('sT1mw').value = S.targets['PGY-1'].mw; el('sT1th').value = S.targets['PGY-1'].th; el('sT1fr').value = S.targets['PGY-1'].fr;
+  el('sCeil').value = S.ceilingPct; el('sPrec').value = S.precepts; el('sPrecTh').value = S.preceptsThu;
+  el('sAtt').value = S.attendings; el('sAway').value = S.awayAsElective ? '1' : '0';
+
+  var names = S.order.slice();
+  var head = '<tr><th>Resident</th><th>Level</th><th>Active</th>';
+  for(var i=1;i<=12;i++) head += '<th style="text-align:center">B'+i+'</th>';
+  head += '<th>Elective clinic day</th><th>Firm partner</th><th>Lane</th></tr>';
+  var body = names.map(function(n){
+    var r = R(n); if(!r) return '';
+    var cells = '';
+    for(var i=0;i<12;i++){
+      cells += '<td style="padding:2px"><input class="code-in" data-name="'+esc(n)+'" data-i="'+i+'" maxlength="1" '+
+        'value="'+esc((r.codes||'').charAt(i)||'N')+'" style="width:30px;text-align:center;padding:5px 2px;min-height:32px" '+
+        'oninput="this.value=this.value.toUpperCase().replace(/[^ONEA]/g,\'\')"></td>';
+    }
+    var partnerOpts = '<option value="">— none —</option>' + names.filter(function(x){ return x!==n; })
+      .map(function(x){ return '<option value="'+esc(x)+'"'+(r.partner===x?' selected':'')+'>'+esc(x)+'</option>'; }).join('');
+    var dayOpts = [1,2,3,4,5].map(function(d){ return '<option value="'+d+'"'+(r.electiveDay===d?' selected':'')+'>'+WD_NAME[d]+'</option>'; }).join('');
+    return '<tr><td><b>'+esc(n)+'</b></td><td>'+r.level+'</td>'+
+      '<td style="text-align:center"><input type="checkbox" class="act-in" data-name="'+esc(n)+'"'+(r.active?' checked':'')+'></td>'+
+      cells +
+      '<td><select class="day-in" data-name="'+esc(n)+'">'+dayOpts+'</select></td>'+
+      '<td><select class="ptn-in" data-name="'+esc(n)+'">'+partnerOpts+'</select></td>'+
+      '<td><input class="lane-in" data-name="'+esc(n)+'" value="'+esc(r.lane||'')+'" style="width:92px"></td></tr>';
+  }).join('');
+  el('setRoster').innerHTML = head + body;
+
+  var t = '';
+  ['PGY-2','PGY-1'].forEach(function(lvl){
+    [1,2,3,4,5].forEach(function(d){
+      var lines = templateFor(lvl,d).map(function(s){ return minToShort(s.m)+' '+s.cls; }).join('\n');
+      t += '<div><label class="rule"><b>'+lvl+' · '+WD_NAME[d]+'</b> ('+templateFor(lvl,d).length+' slots)</label>'+
+           '<textarea class="tpl-in" data-lvl="'+lvl+'" data-d="'+d+'">'+esc(lines)+'</textarea></div>';
+    });
+  });
+  el('setTemplates').innerHTML = t;
+}
+
+function saveSettings(announce){
+  S.targets['PGY-2'] = {mw:+el('sT2mw').value||12, th:+el('sT2th').value||6,  fr:+el('sT2fr').value||10};
+  S.targets['PGY-1'] = {mw:+el('sT1mw').value||5,  th:+el('sT1th').value||3,  fr:+el('sT1fr').value||4};
+  S.ceilingPct = Math.min(100, Math.max(10, +el('sCeil').value||70));
+  S.precepts   = +el('sPrec').value||32;
+  S.preceptsThu= +el('sPrecTh').value||16;
+  S.attendings = Math.min(5, Math.max(1, +el('sAtt').value||3));
+  S.awayAsElective = el('sAway').value === '1';
+
+  document.querySelectorAll('.act-in').forEach(function(i){ R(i.dataset.name).active = i.checked; });
+  document.querySelectorAll('.day-in').forEach(function(i){ R(i.dataset.name).electiveDay = +i.value; });
+  document.querySelectorAll('.ptn-in').forEach(function(i){ R(i.dataset.name).partner = i.value; });
+  document.querySelectorAll('.lane-in').forEach(function(i){ R(i.dataset.name).lane = i.value; });
+  document.querySelectorAll('.code-in').forEach(function(i){
+    var r = R(i.dataset.name), k = +i.dataset.i, c = (i.value||'N').toUpperCase();
+    if('ONEA'.indexOf(c) < 0) c = 'N';
+    var codes = (r.codes || 'NNNNNNNNNNNN').split(''); codes[k] = c; r.codes = codes.join('');
+  });
+  persist();
+  refreshAll();
+  if(announce) alert('Settings saved in this browser.');
+}
+function saveTemplates(){
+  document.querySelectorAll('.tpl-in').forEach(function(ta){
+    var lvl = ta.dataset.lvl, d = +ta.dataset.d, out = [];
+    ta.value.split('\n').forEach(function(line){
+      var mm = line.trim().match(/^(\d{1,2}):(\d{2})\s+(Est|New|FROZEN|HospFU|Any)$/i);
+      if(!mm) return;
+      var h = +mm[1]; if(h < 7) h += 12;                       /* 1:00 means 1 PM */
+      var m = h*60 + (+mm[2]);
+      if(m >= 720 && m < 780) return;                           /* lunch is never bookable */
+      var cls = mm[3]; cls = cls.toUpperCase()==='FROZEN' ? 'FROZEN' :
+                cls.toLowerCase()==='hospfu' ? 'HospFU' : cls.charAt(0).toUpperCase()+cls.slice(1).toLowerCase();
+      out.push(tpl(m, cls==='Any' ? 60 : 30, cls));
+    });
+    out.sort(function(a,b){ return a.m - b.m; });
+    if(out.length) S.templates[lvl][d] = out;
+  });
+  persist(); renderSettings(); refreshAll();
+  alert('Templates saved.');
+}
+function exportJSON(){
+  var blob = new Blob([JSON.stringify(S,null,2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tempo-scheduler-settings.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function importJSON(){
+  try{
+    var obj = JSON.parse(el('importTA').value);
+    if(!obj || !obj.residents) throw new Error('That file has no roster in it.');
+    localStorage.setItem(LS_KEY, JSON.stringify(obj));
+    alert('Settings loaded. The page will reload.'); location.reload();
+  }catch(e){ alert('Could not read that file: ' + e.message); }
+}
+
+function refreshAll(){
+  fillResidentSelect();
+  if(!el('tab-who').classList.contains('hidden')) renderWho();
+  if(el('yearOut').innerHTML) renderHeatmap();
+  if(el('dayRoster').innerHTML) renderDayRoster();
+}
+function fillResidentSelect(){
+  var sel = el('t2res'), cur = sel.value;
+  var g2 = activeResidents().filter(function(r){ return r.level==='PGY-2'; });
+  var g1 = activeResidents().filter(function(r){ return r.level==='PGY-1'; });
+  function opts(list){ return list.map(function(r){ return '<option value="'+esc(r.name)+'">'+esc(r.name)+'</option>'; }).join(''); }
+  sel.innerHTML = '<optgroup label="PGY-2">'+opts(g2)+'</optgroup><optgroup label="PGY-1">'+opts(g1)+'</optgroup>';
+  if(cur) sel.value = cur;
+}
+
+/* ------------------------------- INIT ------------------------------------ */
+
+function init(){
+  loadSettings();
+  document.querySelectorAll('.tab').forEach(function(b){ b.onclick = function(){ go(b.dataset.tab); }; });
+  var d = defaultDate();
+  el('t1date').value = d; el('t4date').value = d; el('t2from').value = d;
+  el('t1att').value = S.attendings; el('t4att').value = S.attendings;
+  fillResidentSelect();
+  if(S.bannerDismissed) el('electiveBanner').classList.add('hidden');
+  el('t1date').onchange = renderWho;
+  el('t1att').onchange  = renderWho;
+  el('t4date').onchange = renderDayRoster;
+  el('t4att').onchange  = updateDayBanner;
+  ['t2weeks','t2tol','t2type','t2cont','t2from','t2res'].forEach(function(id){
+    el(id).onchange = function(){ whenBooked = {}; renderWhen(); };
+  });
+  renderWho();
+  renderWhen();
+  renderDayRoster();
+  if(location.search.indexOf('selftest') >= 0) el('selftest').classList.remove('hidden');
+  runSelfTests();
+}
+
+/* ============================ SELF-TESTS =================================
+   Hidden acceptance tests. Open the console (or add ?selftest=1) to see them.
+   ======================================================================== */
+function runSelfTests(){
+  var saved = S;
+  S = defaultSettings();                       /* tests always run on the built-in defaults */
+  var results = [];
+  function t(name, fn){
+    try{
+      var r = fn();
+      results.push({name:name, pass: r === true, detail: (r === true ? '' : String(r))});
+    }catch(e){ results.push({name:name, pass:false, detail:'threw: '+e.message}); }
+  }
+  function eq(a,b,label){ return a===b ? true : (label||'')+' expected '+JSON.stringify(b)+' but got '+JSON.stringify(a); }
+
+  /* 1 — blocks */
+  t('1. blockForDate maps dates to the right block', function(){
+    var a = blockForDate('2026-09-15'), b = blockForDate('2027-01-10'), c = blockForDate('2026-06-30');
+    if(!a || a.label !== 'B3') return '2026-09-15 should be B3, got ' + (a && a.label);
+    if(!b || b.label !== 'B7') return '2027-01-10 should be B7, got ' + (b && b.label);
+    if(c !== null) return '2026-06-30 should be outside the year';
+    var msg = outsideYearMessage('2026-06-30');
+    if(!/outside the 2026–27 academic year/.test(msg)) return 'no friendly message for an outside-year date';
+    return true;
+  });
+
+  /* 2 — availability for Arjun Dhir */
+  t('2. availabilityFor follows O / N / E / A', function(){
+    var r = R('Arjun Dhir');
+    function expect(iso){ return weekdayOf(iso) === r.electiveDay ? 'ELECTIVE_DAY' : 'NONE'; }
+    var a = availabilityFor('Arjun Dhir','2026-09-15');            /* B3 = E */
+    if(a !== expect('2026-09-15')) return 'B3 (E) on 2026-09-15: got '+a;
+    if(a !== 'ELECTIVE_DAY' && a !== 'NONE') return 'B3 must be ELECTIVE_DAY or NONE';
+    var b = availabilityFor('Arjun Dhir','2026-12-10');            /* B6 = E */
+    if(b !== expect('2026-12-10')) return 'B6 (E) on 2026-12-10: got '+b;
+    var c = availabilityFor('Arjun Dhir','2026-08-05');            /* B2 = N */
+    if(c !== 'NONE') return 'B2 (N) on 2026-08-05 should be NONE, got '+c;
+    var d = availabilityFor('Arjun Dhir','2027-02-10');            /* B8 = O */
+    if(d !== 'FULL') return 'B8 (O) on 2027-02-10 should be FULL, got '+d;
+    return true;
+  });
+
+  /* 3 — residentsOnDate */
+  t('3. residentsOnDate lists everyone on a Wednesday in B3', function(){
+    var list = residentsOnDate('2026-09-16'), names = list.map(function(r){ return r.name; });
+    var must = ['Emily Angeles Mancinas','Rudrani Kotha','Jorge Reynoso Figueroa','Poonam Tawde',
+                'Gaston Rodriguez','Savad Torres'];
+    for(var i=0;i<must.length;i++) if(names.indexOf(must[i]) < 0) return 'missing ' + must[i];
+    for(var j=0;j<list.length;j++){
+      var r = list[j];
+      if(r.status === 'ELECTIVE_DAY' && r.electiveDay !== 3) return r.name + ' is listed on a Wednesday but their elective day is ' + WD_NAME[r.electiveDay];
+      if(r.status === 'FULL' && codeFor(r.name,'2026-09-16') !== 'O') return r.name + ' is FULL but not on an O block';
+    }
+    return true;
+  });
+
+  /* 4 — templates */
+  t('4. Thursday is AM only and Friday starts at 9:00', function(){
+    var th2 = templateFor('PGY-2',4), th1 = templateFor('PGY-1',4);
+    var fr2 = templateFor('PGY-2',5), fr1 = templateFor('PGY-1',5);
+    if(th2.length !== 8) return 'PGY-2 Thursday should have 8 slots, got '+th2.length;
+    if(th1.length !== 4) return 'PGY-1 Thursday should have 4 slots, got '+th1.length;
+    if(th2.some(function(s){ return s.m >= 720; })) return 'PGY-2 Thursday has an afternoon slot';
+    if(th1.some(function(s){ return s.m >= 720; })) return 'PGY-1 Thursday has an afternoon slot';
+    if(fr2.length !== 14) return 'PGY-2 Friday should have 14 slots, got '+fr2.length;
+    if(fr1.length !== 7)  return 'PGY-1 Friday should have 7 slots, got '+fr1.length;
+    if(fr2.some(function(s){ return s.m === 480 || s.m === 510; })) return 'PGY-2 Friday still has 8:00 / 8:30';
+    if(fr1.some(function(s){ return s.m === 480; })) return 'PGY-1 Friday still has 8:00';
+    var mw2 = templateFor('PGY-2',1), mw1 = templateFor('PGY-1',1);
+    if(mw2.length !== 16) return 'PGY-2 Mon should have 16 slots, got '+mw2.length;
+    if(mw1.length !== 8)  return 'PGY-1 Mon should have 8 slots, got '+mw1.length;
+    if(mw2.concat(mw1).some(function(s){ return s.m >= 720 && s.m < 780; })) return 'a slot lands in the lunch hour';
+    return true;
+  });
+
+  /* 5 — a window with no clinic still gives an answer */
+  t('5. an all-inpatient window still returns the nearest dates', function(){
+    var res = adviseBooking({resident:'Arjun Dhir', from:'2026-09-01', weeks:38, tol:2, visitType:'EST', continuity:'C2'});
+    if(res.dates.length !== 0) return 'expected an empty window, got '+res.dates.length+' dates';
+    if(res.nearestBefore.length + res.nearestAfter.length === 0) return 'no nearest dates offered';
+    if(!res.recommendation || res.recommendation.length < 20) return 'no sentence given to the scheduler';
+    if(!/no clinic in that window/.test(res.recommendation)) return 'recommendation does not explain why';
+    return true;
+  });
+
+  /* 6 — capacity squeeze */
+  t('6. one attending and 60 booked → 28 moves, PGY-1 protected', function(){
+    var p2 = ROSTER_PGY2.slice(0,6).map(function(x){ return {name:x[0], level:'PGY-2', lane:R(x[0]).lane,
+              partner:R(x[0]).partner, present:true, est:8, nw:0, hosp:0, must:0, prefer:0}; });
+    var p1 = ROSTER_PGY1.slice(0,3).map(function(x){ return {name:x[0], level:'PGY-1', lane:R(x[0]).lane,
+              partner:R(x[0]).partner, present:true, est:4, nw:0, hosp:0, must:0, prefer:0}; });
+    var day = buildDay({date:'2026-09-14', attendings:1, daysOut:0, residents:p2.concat(p1),
+                        queues:{urgent:0,disch:0,wait:0,newpts:0}});
+    if(day.startTotal !== 60) return 'setup wrong: startTotal '+day.startTotal;
+    if(day.cap !== 32) return 'cap should be 32, got '+day.cap;
+    if(day.movedTotal !== 28) return 'expected 28 moves, got '+day.movedTotal;
+    if(day.endTotal !== 32) return 'expected 32 left, got '+day.endTotal;
+    var pgy1 = day.people.filter(function(p){ return p.level==='PGY-1'; });
+    for(var i=0;i<pgy1.length;i++){
+      var p = pgy1[i];
+      if(p.movedOut.any + p.movedOut.prefer + p.movedOut.must !== 0) return 'a PGY-1 slot was touched: '+p.name;
+      if(p.est !== 4) return 'PGY-1 booking count changed for '+p.name;
+    }
+    for(var j=0;j<day.people.length;j++){
+      var q = day.people[j];
+      if(q.movedOut.prefer || q.movedOut.must) return '"any doctor" was not used first — '+q.name;
+      if(pTotal(q) > q.maxSlots) return q.name+' is above the template maximum';
+    }
+    layoutDay(day);
+    for(var k=0;k<day.people.length;k++){
+      var cells = day.people[k].cells;
+      for(var z=0;z<cells.length;z++) if(cells[z].m >= 720 && cells[z].m < 780) return 'something was placed in the lunch hour';
+    }
+    return true;
+  });
+
+  /* 7 — someone calls out */
+  t('7. call-out cascade: partner takes must-see up to 2 over target', function(){
+    var absent = 'Arjun Dhir', partnerName = R(absent).partner;
+    var day = buildDay({date:'2026-09-16', attendings:5, daysOut:0, residents:[
+      {name:absent, level:'PGY-2', lane:R(absent).lane, partner:partnerName, present:true,
+       est:9, nw:0, hosp:0, must:3, prefer:4},
+      {name:partnerName, level:'PGY-1', lane:R(absent).lane, partner:absent, present:true,
+       est:6, nw:0, hosp:0, must:0, prefer:0},
+      {name:'Rudrani Kotha', level:'PGY-2', lane:R(absent).lane, partner:'', present:true,
+       est:2, nw:0, hosp:0, must:0, prefer:0}
+    ], queues:{urgent:0,disch:0,wait:0,newpts:0}});
+    var partner = day.people.filter(function(p){ return p.name===partnerName; })[0];
+    var startPartner = pTotal(partner);
+    var casc = sameDayFallback(absent, day);
+    if(casc.startCounts.must !== 3 || casc.startCounts.prefer !== 4 || casc.startCounts.any !== 2)
+      return 'setup wrong: '+JSON.stringify(casc.startCounts);
+    if(pTotal(partner) > partner.target + 2) return 'partner went more than 2 over target ('+pTotal(partner)+' vs target '+partner.target+')';
+    if(casc.mustPlaced > Math.max(0, partner.target + 2 - startPartner)) return 'partner took more must-see patients than allowed';
+    var leftover = 3 - casc.mustPlaced;
+    if(leftover > 0){
+      if(!casc.toNextDate.length) return 'leftover must-see patients were not sent to a next clinic date';
+      if(casc.toNextDate[0].count !== leftover) return 'wrong leftover count';
+      if(!casc.toNextDate[0].dates.length) return 'no next clinic dates listed for '+absent;
+    }
+    if(casc.mustPlaced + casc.preferPlaced + casc.anyPlaced + casc.nurseList + leftover !== 9)
+      return 'patients went missing in the cascade';
+    return true;
+  });
+
+  /* 8 — heatmap */
+  t('8. the heatmap draws every weekday of the year with counts and names', function(){
+    renderHeatmap();
+    var expected = 0, iso = YEAR_START, guard = 0;
+    while(iso <= YEAR_END && guard++ < 460){ if(isWeekday(iso)) expected++; iso = addDays(iso,1); }
+    var cells = document.querySelectorAll('#yearOut .hm-d:not(.blank)');
+    if(cells.length !== expected) return 'expected '+expected+' weekday cells, drew '+cells.length;
+    var withNames = 0;
+    for(var i=0;i<cells.length;i++){
+      var title = cells[i].getAttribute('title') || '';
+      if(!/resident/.test(title)) return 'a day has no hover text';
+      if(/:\n/.test(title)) withNames++;
+    }
+    if(withNames < 200) return 'hover names are missing on most days ('+withNames+')';
+    return true;
+  });
+
+  /* report */
+  var pass = results.filter(function(r){ return r.pass; }).length;
+  var lines = results.map(function(r){ return (r.pass ? 'PASS  ' : 'FAIL  ') + r.name + (r.detail ? '  →  ' + r.detail : ''); });
+  lines.push('');
+  lines.push(pass + ' of ' + results.length + ' acceptance tests passed.');
+  console.log('%cTEMPO Scheduler — acceptance tests', 'font-weight:bold');
+  results.forEach(function(r){
+    console.log((r.pass ? 'PASS' : 'FAIL') + ' — ' + r.name + (r.detail ? '  →  ' + r.detail : ''));
+  });
+  console.log(pass + '/' + results.length + ' PASS');
+  var host = el('selftest');
+  if(host) host.textContent = lines.join('\n');
+  window.__TEMPO_TESTS__ = {pass:pass, total:results.length, results:results};
+
+  S = saved;                                    /* put the scheduler's own settings back */
+  return window.__TEMPO_TESTS__;
+}
+
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+</script>
+</body>
+</html>
