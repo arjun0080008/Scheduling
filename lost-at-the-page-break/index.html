@@ -2146,15 +2146,16 @@ body {
     <button type="button" class="x" id="helpX">Close</button>
     <h2>Keys</h2>
     <dl>
-      <dt>Space · → · ↓ · click</dt><dd>Next move</dd>
-      <dt>Shift+Space · ← · ↑</dt><dd>Back one move</dd>
+      <dt>Space · → · ↓ · click</dt><dd>Next slide (it plays all its moves by itself)</dd>
+      <dt>Shift+Space · ← · ↑</dt><dd>Previous slide</dd>
       <dt>Page Down / Page Up</dt><dd>Next / previous (clicker)</dd>
       <dt>Home · End</dt><dd>First / last slide</dd>
       <dt>number, then Enter</dt><dd>Jump to that slide</dd>
       <dt>O</dt><dd>All slides</dd>
       <dt>F</dt><dd>Full screen</dd>
       <dt>T</dt><dd>Light / dark</dd>
-      <dt>B</dt><dd>One press per slide / one press per move</dd>
+      <dt>S</dt><dd>Show everything on this slide now</dd>
+      <dt>B</dt><dd>Step through each move by hand (on / off)</dd>
       <dt>M</dt><dd>Calmer motion on / off</dd>
       <dt>Esc</dt><dd>Close this</dd>
     </dl>
@@ -4061,7 +4062,12 @@ Deck.slide(29, {
   }
 
   /* -------------------------------------------------------------- state */
-  var cur = -1, seg = 0, trans = null, segTween = null, lastPress = 0, started = false, AUTO = store('lapb-auto') === '1', autoTimer = 0;
+  /* AUTO (the default): a slide plays all of its moves by itself on arrival, so one press = one slide.
+     Step mode (key B, or ?step) hands every move back to the presenter. */
+  var cur = -1, seg = 0, trans = null, segTween = null, lastPress = 0, started = false, autoTimer = 0;
+  var AUTO = !(qs.has('step') || store('lapb-step') === '1');
+  var HOLD = 0.3, RATE = 1.25;                 // pause between a slide's moves, and how much brisker the follow-on moves play
+  var HOLDS = { 8: [0.5], 9: [0.9], 12: [0.7], 13: [0.5], 17: [0.4, 1.5, 0.4], 19: [0.6], 22: [0.8], 24: [0.5, 0.9] };   // slides that need a beat of silence
 
   function at(sl, t) { sl.tl.pause(); sl.tl.seek(Math.max(t, 0.001), false); }   // never exactly 0: zero-duration sets at time 0 must be applied
   function setLoops(sl, on) {
@@ -4073,18 +4079,36 @@ Deck.slide(29, {
   function playSeg(sl, i, instant) {
     if (segTween) { segTween.kill(); segTween = null; }
     var t1 = sl.beats[i + 1];
-    if (instant || REDUCED || SHOT) { at(sl, t1); setLoops(sl, true); return; }
-    segTween = sl.tl.tweenTo(t1, { ease: 'none', onComplete: function () { segTween = null; setLoops(sl, true); autoNext(sl, i); } });
+    if (instant || REDUCED || SHOT) {
+      if (AUTO && !SHOT && !instant) { seg = sl.segs - 1; t1 = sl.beats[sl.segs]; hud(); }      // no motion: show the whole slide at once
+      at(sl, t1); setLoops(sl, true); return;
+    }
+    var rate = (AUTO && i > 0) ? RATE : 1;
+    segTween = sl.tl.tweenTo(t1, { ease: 'none', duration: Math.max(0.01, (t1 - sl.tl.time()) / rate), onComplete: function () { segTween = null; setLoops(sl, true); autoNext(sl, i); } });
   }
   function autoNext(sl, i) {
-    clearTimeout(autoTimer);
+    clearTimeout(autoTimer); autoTimer = 0;
     if (!AUTO || SHOT || i >= sl.segs - 1) return;
-    autoTimer = setTimeout(function () { if (S[cur] === sl && seg === i && !trans && !segTween) { seg++; hud(); playSeg(sl, seg); } }, 900);
+    var h = sl.def.hold || HOLDS[sl.n], wait = (h && h[i] != null) ? h[i] : HOLD;
+    var tick = function () {
+      autoTimer = 0;
+      if (S[cur] !== sl || seg !== i || segTween || !AUTO) return;
+      if (trans) { autoTimer = setTimeout(tick, 120); return; }                                   // still arriving: try again shortly
+      seg++; hud(); playSeg(sl, seg);
+    };
+    autoTimer = setTimeout(tick, wait * 1000);
+  }
+  /* show everything on the current slide right now */
+  function finishBuild() {
+    if (cur < 0) return;
+    finish();
+    var sl = S[cur]; seg = sl.segs - 1; at(sl, sl.beats[sl.segs]); hud(); setLoops(sl, true);
   }
   function finish() {
-    clearTimeout(autoTimer);
+    clearTimeout(autoTimer); autoTimer = 0;
     if (trans) { var t = trans; trans = null; t.progress(1); }
     if (segTween) { var s = segTween; segTween = null; s.progress(1); if (cur >= 0) setLoops(S[cur], true); }
+    clearTimeout(autoTimer); autoTimer = 0;       // completing a move may have queued the next one: the caller decides what happens now
   }
   function resetWrap(sl) {
     gsap.set(sl.el, { clearProps: 'transform,opacity,filter' });
@@ -4173,9 +4197,14 @@ Deck.slide(29, {
   function next() {
     if (cur < 0) return;
     hideHint();
-    var busy = !!(trans || segTween);
+    var busy = !!(trans || segTween || autoTimer);
     finish();
     var sl = S[cur];
+    if (AUTO) {                                   // one press = one slide, always
+      if (cur < N - 1) go(cur + 1, 1);
+      else if (busy) finishBuild(); else nudge();
+      return;
+    }
     if (seg < sl.segs - 1) { seg++; hud(); playSeg(sl, seg); }
     else if (cur < N - 1) go(cur + 1, 1);
     else if (!busy) nudge();
@@ -4184,6 +4213,7 @@ Deck.slide(29, {
     if (cur < 0) return;
     finish();
     var sl = S[cur];
+    if (AUTO) { if (cur > 0) go(cur - 1, -1); else finishBuild(); return; }
     if (seg > 0) {
       seg--; hud(); setLoops(sl, true);
       if (REDUCED || SHOT) at(sl, sl.beats[seg + 1]);
@@ -4296,7 +4326,11 @@ Deck.slide(29, {
     else if (k === 't' || k === 'T') toggleTheme();
     else if (k === 'o' || k === 'O' || k === 'g' || k === 'G') openOv();
     else if (k === 'm' || k === 'M') setLite(!LITE);
-    else if (k === 'b' || k === 'B') { AUTO = !AUTO; store('lapb-auto', AUTO ? '1' : '0'); toast(AUTO ? 'One press per slide' : 'One press per move'); }
+    else if (k === 'b' || k === 'B') {
+      AUTO = !AUTO; store('lapb-step', AUTO ? '0' : '1'); toast(AUTO ? 'One press per slide' : 'One press per move');
+      if (AUTO && cur >= 0 && !trans && !segTween) autoNext(S[cur], seg); else if (!AUTO) { clearTimeout(autoTimer); autoTimer = 0; }
+    }
+    else if (k === 's' || k === 'S') finishBuild();
     else if (k === '?' || k === 'h' || k === 'H') { help.classList.add('open'); }
     else if (k === 'Escape') { numBuf = ''; }
   });
@@ -4364,7 +4398,7 @@ Deck.slide(29, {
 
   /* ------------------------------------------------- dev / capture hooks */
   Deck.next = next; Deck.prev = prev; Deck.jump = jump;
-  Deck.state = function () { return { slide: cur >= 0 ? S[cur].n : 0, seg: seg, segs: cur >= 0 ? S[cur].segs : 0, total: N }; };
+  Deck.state = function () { return { slide: cur >= 0 ? S[cur].n : 0, seg: seg, segs: cur >= 0 ? S[cur].segs : 0, total: N, auto: AUTO, busy: !!(trans || segTween || autoTimer) }; };
   Deck.info = function () { return S.map(function (s) { return { n: s.n, segs: s.segs, beats: s.beats.slice(), enter: typeof s.def.enter === 'function' ? 'custom' : (s.def.enter || 'push') }; }); };
   /* put slide n at the end of segment k (0-based; default last), instantly */
   Deck.pose = function (n, k) {
